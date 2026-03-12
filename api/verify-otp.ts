@@ -1,70 +1,78 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { createClient } from '@supabase/supabase-js';
 
 /**
  * POST /api/verify-otp
  * Body: { email: string, otp: string }
  * Returns: { valid: boolean }
  *
- * Verifies OTP from Supabase (shared across serverless instances).
+ * Reads OTP from Supabase via REST (no SDK import — avoids bundle issues).
  * Deletes the OTP on successful verification (one-time use).
  */
 
-function getSupabase() {
-    const url = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
-    const key = process.env.SUPABASE_SERVICE_ROLE_KEY
-        || process.env.SUPABASE_ANON_KEY
-        || process.env.VITE_SUPABASE_ANON_KEY;
+// ── Supabase REST helpers (no SDK import needed) ──────────────────────────
+async function supabaseGetOtp(email: string): Promise<{ otp: string; expires_at: string } | null> {
+    const url = process.env.VITE_SUPABASE_URL;
+    const key = process.env.VITE_SUPABASE_ANON_KEY;
     if (!url || !key) return null;
-    return createClient(url, key);
+
+    const res = await fetch(
+        `${url}/rest/v1/otp_store?email=eq.${encodeURIComponent(email)}&select=otp,expires_at&limit=1`,
+        {
+            headers: {
+                'apikey': key,
+                'Authorization': `Bearer ${key}`,
+            },
+        }
+    );
+    const rows = await res.json();
+    return Array.isArray(rows) && rows.length > 0 ? rows[0] : null;
+}
+
+async function supabaseDeleteOtp(email: string): Promise<void> {
+    const url = process.env.VITE_SUPABASE_URL;
+    const key = process.env.VITE_SUPABASE_ANON_KEY;
+    if (!url || !key) return;
+
+    await fetch(`${url}/rest/v1/otp_store?email=eq.${encodeURIComponent(email)}`, {
+        method: 'DELETE',
+        headers: {
+            'apikey': key,
+            'Authorization': `Bearer ${key}`,
+        },
+    });
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-    res.setHeader('Access-Control-Allow-Origin', process.env.FRONTEND_URL || '*');
+    res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
 
     if (req.method === 'OPTIONS') return res.status(200).end();
     if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
-    const { email, otp } = req.body as { email?: string; otp?: string };
-    if (!email || !otp) return res.status(400).json({ error: 'email and otp are required', valid: false });
+    try {
+        const { email, otp } = req.body as { email?: string; otp?: string };
+        if (!email || !otp) {
+            return res.status(400).json({ error: 'email and otp are required', valid: false });
+        }
 
-    const lower = email.toLowerCase();
+        const lower = email.toLowerCase();
+        const entry = await supabaseGetOtp(lower);
 
-    // ── Check Supabase store first ────────────────────────────────────────────
-    const sb = getSupabase();
-    if (sb) {
-        const { data, error } = await sb
-            .from('otp_store')
-            .select('otp, expires_at')
-            .eq('email', lower)
-            .single();
-
-        if (error || !data) return res.status(200).json({ valid: false, reason: 'not_found' });
-        if (new Date(data.expires_at) < new Date()) {
-            await sb.from('otp_store').delete().eq('email', lower);
+        if (!entry) return res.status(200).json({ valid: false, reason: 'not_found' });
+        if (new Date(entry.expires_at) < new Date()) {
+            await supabaseDeleteOtp(lower);
             return res.status(200).json({ valid: false, reason: 'expired' });
         }
-        if (data.otp !== otp.trim()) return res.status(200).json({ valid: false, reason: 'wrong_otp' });
+        if (entry.otp !== otp.trim()) {
+            return res.status(200).json({ valid: false, reason: 'wrong_otp' });
+        }
 
         // Consume — one-time use
-        await sb.from('otp_store').delete().eq('email', lower);
+        await supabaseDeleteOtp(lower);
         return res.status(200).json({ valid: true });
+    } catch (err: any) {
+        console.error('[verify-otp] Unhandled error:', err);
+        return res.status(500).json({ error: err?.message || 'Internal server error', valid: false });
     }
-
-    // ── Fallback: in-process global store (same instance only) ───────────────
-    const store: Map<string, { otp: string; expiresAt: number }> =
-        (global as any)._civicOtpStore ?? new Map();
-
-    const entry = store.get(lower);
-    if (!entry) return res.status(200).json({ valid: false, reason: 'not_found' });
-    if (Date.now() > entry.expiresAt) {
-        store.delete(lower);
-        return res.status(200).json({ valid: false, reason: 'expired' });
-    }
-    if (entry.otp !== otp.trim()) return res.status(200).json({ valid: false, reason: 'wrong_otp' });
-
-    store.delete(lower);
-    return res.status(200).json({ valid: true });
 }

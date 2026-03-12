@@ -37,8 +37,14 @@ export async function sendOtp(email: string, name: string = 'User'): Promise<voi
         body: JSON.stringify({ email, name }),
     });
     if (!res.ok) {
-        const err = await res.json().catch(() => ({ error: 'Unknown error' }));
-        throw new Error(err.error || `Server error ${res.status}`);
+        let msg = `Server error ${res.status}`;
+        try {
+            const body = await res.json();
+            msg = body.error || msg;
+        } catch {
+            try { msg = await res.text() || msg; } catch { /* ignore */ }
+        }
+        throw new Error(msg);
     }
 }
 
