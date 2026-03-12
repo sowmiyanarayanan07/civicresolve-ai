@@ -52,7 +52,11 @@ export async function sendOtp(email: string, name: string = 'User'): Promise<voi
     const publicKey = import.meta.env.VITE_EMAILJS_PUBLIC_KEY;
 
     if (!serviceId || !templateId || !publicKey) {
-        throw new Error('EmailJS not configured. Check VITE_EMAILJS_SERVICE_ID, VITE_EMAILJS_TEMPLATE_ID, VITE_EMAILJS_PUBLIC_KEY in .env.local');
+        const missing = [];
+        if (!serviceId) missing.push('VITE_EMAILJS_SERVICE_ID');
+        if (!templateId) missing.push('VITE_EMAILJS_TEMPLATE_ID');
+        if (!publicKey) missing.push('VITE_EMAILJS_PUBLIC_KEY');
+        throw new Error(`EmailJS not configured. Missing: ${missing.join(', ')}. Please add them to Vercel Environment Variables.`);
     }
 
     const otp = makeOtp();
