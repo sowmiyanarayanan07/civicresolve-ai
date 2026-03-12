@@ -1,79 +1,102 @@
 /**
- * OTP Service
- * - If VITE_VERCEL_API_URL is set: calls the secure Vercel backend API
- *   (OTP is generated & stored server-side, never exposed to browser)
- * - Fallback: calls EmailJS directly from the browser (legacy mode)
+ * OTP Service — Browser-native approach
+ *
+ * Flow:
+ * 1. Browser generates OTP
+ * 2. Browser stores OTP in Supabase (otp_store table) via REST
+ * 3. Browser sends email via EmailJS (designed for browser use)
+ * 4. User enters OTP → browser calls /api/verify-otp (reads from Supabase)
  */
 
-const OTP_STORE_KEY = 'civic_otp_store';
-const OTP_TTL = 5 * 60 * 1000;
+import emailjs from '@emailjs/browser';
 
-interface OtpEntry { otp: string; expiresAt: number; }
-
-// ─── Local store helpers (used in legacy / fallback mode) ─────────────────
-function storeOtpLocally(email: string, otp: string) {
-    const store: Record<string, OtpEntry> = readLocalStore();
-    store[email.toLowerCase()] = { otp, expiresAt: Date.now() + OTP_TTL };
-    localStorage.setItem(OTP_STORE_KEY, JSON.stringify(store));
-}
-
-function readLocalStore(): Record<string, OtpEntry> {
-    try { return JSON.parse(localStorage.getItem(OTP_STORE_KEY) || '{}'); } catch { return {}; }
-}
+const OTP_TTL_MINUTES = 5;
 
 function makeOtp(): string {
     return Math.floor(100000 + Math.random() * 900000).toString();
 }
 
-// ─── SEND OTP ─────────────────────────────────────────────────────────────
-export async function sendOtp(email: string, name: string = 'User'): Promise<void> {
-    // If VITE_VERCEL_API_URL is set (separate backend), use it.
-    // Otherwise call /api/... relative to current origin (same Vercel project).
-    const apiBase = import.meta.env.VITE_VERCEL_API_URL || '';
+// ── Supabase REST (browser-side, no SDK needed) ────────────────────────────
+function getSupabaseConfig() {
+    return {
+        url: import.meta.env.VITE_SUPABASE_URL as string,
+        key: import.meta.env.VITE_SUPABASE_ANON_KEY as string,
+    };
+}
 
-    const res = await fetch(`${apiBase}/api/send-otp`, {
+async function supabaseStoreOtp(email: string, otp: string): Promise<void> {
+    const { url, key } = getSupabaseConfig();
+    if (!url || !key) return;
+
+    const expiresAt = new Date(Date.now() + OTP_TTL_MINUTES * 60 * 1000).toISOString();
+    await fetch(`${url}/rest/v1/otp_store`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, name }),
+        headers: {
+            'apikey': key,
+            'Authorization': `Bearer ${key}`,
+            'Content-Type': 'application/json',
+            'Prefer': 'resolution=merge-duplicates',
+        },
+        body: JSON.stringify({ email, otp, expires_at: expiresAt }),
     });
-    if (!res.ok) {
-        let msg = `Server error ${res.status}`;
-        try {
-            const body = await res.json();
-            msg = body.error || msg;
-        } catch {
-            try { msg = await res.text() || msg; } catch { /* ignore */ }
-        }
-        throw new Error(msg);
+}
+
+// ── SEND OTP ─────────────────────────────────────────────────────────────
+export async function sendOtp(email: string, name: string = 'User'): Promise<void> {
+    const serviceId = import.meta.env.VITE_EMAILJS_SERVICE_ID;
+    const templateId = import.meta.env.VITE_EMAILJS_TEMPLATE_ID;
+    const publicKey = import.meta.env.VITE_EMAILJS_PUBLIC_KEY;
+
+    if (!serviceId || !templateId || !publicKey) {
+        throw new Error('EmailJS not configured. Check VITE_EMAILJS_SERVICE_ID, VITE_EMAILJS_TEMPLATE_ID, VITE_EMAILJS_PUBLIC_KEY in .env.local');
+    }
+
+    const otp = makeOtp();
+    const lower = email.toLowerCase();
+
+    // 1. Store OTP in Supabase first (so API can verify it later)
+    await supabaseStoreOtp(lower, otp);
+
+    // 2. Send email from browser via EmailJS (this is what EmailJS is built for)
+    try {
+        await emailjs.send(
+            serviceId,
+            templateId,
+            {
+                to_name: name || lower.split('@')[0],
+                to_email: lower,
+                otp,
+                app_name: 'CivicResolve AI',
+                expiry: `${OTP_TTL_MINUTES} minutes`,
+            },
+            publicKey
+        );
+    } catch (err: any) {
+        const msg = err?.text ?? (err instanceof Error ? err.message : String(err));
+        throw new Error(`Failed to send OTP email: ${msg}`);
     }
 }
 
-// ─── VERIFY OTP ───────────────────────────────────────────────────────────
+// ── VERIFY OTP ───────────────────────────────────────────────────────────
 export async function verifyOtpAsync(email: string, entered: string): Promise<boolean> {
+    // Call Vercel API which reads & validates from Supabase
     const apiBase = import.meta.env.VITE_VERCEL_API_URL || '';
 
-    const res = await fetch(`${apiBase}/api/verify-otp`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, otp: entered }),
-    });
-    if (!res.ok) return false;
-    const json = await res.json();
-    return json.valid === true;
-}
-
-// Sync version (kept for fallback mode / backward compat)
-export function verifyOtp(email: string, entered: string): boolean {
-    const store = readLocalStore();
-    const entry = store[email.toLowerCase()];
-    if (!entry) return false;
-    if (Date.now() > entry.expiresAt) {
-        delete store[email.toLowerCase()];
-        localStorage.setItem(OTP_STORE_KEY, JSON.stringify(store));
+    try {
+        const res = await fetch(`${apiBase}/api/verify-otp`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email: email.toLowerCase(), otp: entered }),
+        });
+        if (!res.ok) return false;
+        const json = await res.json();
+        return json.valid === true;
+    } catch {
         return false;
     }
-    if (entry.otp !== entered.trim()) return false;
-    delete store[email.toLowerCase()];
-    localStorage.setItem(OTP_STORE_KEY, JSON.stringify(store));
-    return true;
+}
+
+// Kept for backward compat
+export function verifyOtp(_email: string, _entered: string): boolean {
+    return false;
 }
