@@ -22,10 +22,10 @@ function makeOtp(): string {
 
 // ── Supabase REST (browser-side, no SDK needed) ────────────────────────────
 function getSupabaseConfig() {
-    return {
-        url: import.meta.env.VITE_SUPABASE_URL as string,
-        key: import.meta.env.VITE_SUPABASE_ANON_KEY as string,
-    };
+    // Try process.env (injected by Vite define) then import.meta.env
+    const url = (typeof process !== 'undefined' && process.env?.VITE_SUPABASE_URL) || import.meta.env.VITE_SUPABASE_URL;
+    const key = (typeof process !== 'undefined' && process.env?.VITE_SUPABASE_ANON_KEY) || import.meta.env.VITE_SUPABASE_ANON_KEY;
+    return { url: url as string, key: key as string };
 }
 
 async function supabaseStoreOtp(email: string, otp: string): Promise<void> {
@@ -47,16 +47,18 @@ async function supabaseStoreOtp(email: string, otp: string): Promise<void> {
 
 // ── SEND OTP ─────────────────────────────────────────────────────────────
 export async function sendOtp(email: string, name: string = 'User'): Promise<void> {
-    const serviceId = import.meta.env.VITE_EMAILJS_SERVICE_ID;
-    const templateId = import.meta.env.VITE_EMAILJS_TEMPLATE_ID;
-    const publicKey = import.meta.env.VITE_EMAILJS_PUBLIC_KEY;
+    const serviceId = (typeof process !== 'undefined' && process.env?.VITE_EMAILJS_SERVICE_ID) || import.meta.env.VITE_EMAILJS_SERVICE_ID;
+    const templateId = (typeof process !== 'undefined' && process.env?.VITE_EMAILJS_TEMPLATE_ID) || import.meta.env.VITE_EMAILJS_TEMPLATE_ID;
+    const publicKey = (typeof process !== 'undefined' && process.env?.VITE_EMAILJS_PUBLIC_KEY) || import.meta.env.VITE_EMAILJS_PUBLIC_KEY;
 
     if (!serviceId || !templateId || !publicKey) {
         const missing = [];
-        if (!serviceId) missing.push('VITE_EMAILJS_SERVICE_ID');
-        if (!templateId) missing.push('VITE_EMAILJS_TEMPLATE_ID');
-        if (!publicKey) missing.push('VITE_EMAILJS_PUBLIC_KEY');
-        throw new Error(`EmailJS not configured. Missing: ${missing.join(', ')}. Please add them to Vercel Environment Variables.`);
+        if (!serviceId) missing.push('EMAILJS_SERVICE_ID');
+        if (!templateId) missing.push('EMAILJS_TEMPLATE_ID');
+        if (!publicKey) missing.push('EMAILJS_PUBLIC_KEY');
+        
+        console.error('EmailJS Configuration Error:', { serviceId, templateId, publicKey });
+        throw new Error(`EmailJS not configured in build. Missing: ${missing.join(', ')}. Please double check Vercel Env Vars and REDEPLOY.`);
     }
 
     const otp = makeOtp();
