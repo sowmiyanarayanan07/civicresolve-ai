@@ -126,8 +126,17 @@ function RoleLoginPanel({
 
         setLoading(true);
         try {
-            const ok = await verifyOtpAsync(email.trim().toLowerCase(), code);
-            if (!ok) { setError('Invalid or expired OTP. Try again.'); setLoading(false); return; }
+            const result = await verifyOtpAsync(email.trim().toLowerCase(), code);
+            if (!result.valid) {
+                let msg = 'Invalid OTP. Try again.';
+                if (result.reason === 'expired') msg = 'This OTP has expired. Please resend a new code.';
+                if (result.reason === 'not_found') msg = 'OTP not found. Please resend a new code.';
+                if (result.reason === 'server_error') msg = 'Server verification error. Please try again.';
+                
+                setError(msg);
+                setLoading(false);
+                return;
+            }
             const role = panelToRole(panel);
             const user = await loginWithOtp(email.trim().toLowerCase(), name.trim() || undefined, role);
             onLogin(user);

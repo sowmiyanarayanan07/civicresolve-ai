@@ -55,15 +55,26 @@ export default async function handler(req, res) {
         const lower = email.toLowerCase();
         const entry = await supabaseGetOtp(lower);
 
-        if (!entry) return res.status(200).json({ valid: false, reason: 'not_found' });
-        if (new Date(entry.expires_at) < new Date()) {
+        if (!entry) {
+            console.log('[verify-otp] No OTP entry found for:', lower);
+            return res.status(200).json({ valid: false, reason: 'not_found' });
+        }
+        
+        const now = new Date();
+        const expiry = new Date(entry.expires_at);
+        
+        if (expiry < now) {
+            console.log('[verify-otp] OTP expired for:', lower, 'Expired at:', entry.expires_at, 'Current server time:', now.toISOString());
             await supabaseDeleteOtp(lower);
             return res.status(200).json({ valid: false, reason: 'expired' });
         }
-        if (entry.otp !== otp.trim()) {
+        
+        if (entry.otp.trim() !== otp.trim()) {
+            console.log('[verify-otp] Wrong OTP for:', lower, 'Expected:', entry.otp, 'Got:', otp);
             return res.status(200).json({ valid: false, reason: 'wrong_otp' });
         }
 
+        console.log('[verify-otp] Success for:', lower);
         await supabaseDeleteOtp(lower);
         return res.status(200).json({ valid: true });
     } catch (err) {

@@ -102,9 +102,8 @@ export async function sendOtp(email: string, name: string = 'User'): Promise<voi
 }
 
 // ── VERIFY OTP ───────────────────────────────────────────────────────────
-export async function verifyOtpAsync(email: string, entered: string): Promise<boolean> {
-    // Call Vercel API which reads & validates from Supabase
-    const apiBase = import.meta.env.VITE_VERCEL_API_URL || '';
+export async function verifyOtpAsync(email: string, entered: string): Promise<{ valid: boolean; reason?: string }> {
+    const apiBase = (typeof process !== 'undefined' && process.env?.VITE_VERCEL_API_URL) || import.meta.env.VITE_VERCEL_API_URL || '';
 
     try {
         const res = await fetch(`${apiBase}/api/verify-otp`, {
@@ -112,11 +111,11 @@ export async function verifyOtpAsync(email: string, entered: string): Promise<bo
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ email: email.toLowerCase(), otp: entered }),
         });
-        if (!res.ok) return false;
+        if (!res.ok) return { valid: false, reason: 'server_error' };
         const json = await res.json();
-        return json.valid === true;
-    } catch {
-        return false;
+        return { valid: json.valid === true, reason: json.reason };
+    } catch (err: any) {
+        return { valid: false, reason: 'connection_error' };
     }
 }
 
