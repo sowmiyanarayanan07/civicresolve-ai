@@ -30,19 +30,33 @@ function getSupabaseConfig() {
 
 async function supabaseStoreOtp(email: string, otp: string): Promise<void> {
     const { url, key } = getSupabaseConfig();
-    if (!url || !key) return;
+    if (!url || !key) {
+        console.error('Supabase config missing in browser');
+        return;
+    }
 
     const expiresAt = new Date(Date.now() + OTP_TTL_MINUTES * 60 * 1000).toISOString();
-    await fetch(`${url}/rest/v1/otp_store`, {
-        method: 'POST',
-        headers: {
-            'apikey': key,
-            'Authorization': `Bearer ${key}`,
-            'Content-Type': 'application/json',
-            'Prefer': 'resolution=merge-duplicates',
-        },
-        body: JSON.stringify({ email, otp, expires_at: expiresAt }),
-    });
+    try {
+        const res = await fetch(`${url}/rest/v1/otp_store`, {
+            method: 'POST',
+            headers: {
+                'apikey': key,
+                'Authorization': `Bearer ${key}`,
+                'Content-Type': 'application/json',
+                'Prefer': 'resolution=merge-duplicates',
+            },
+            body: JSON.stringify({ email: email.toLowerCase(), otp, expires_at: expiresAt }),
+        });
+        
+        if (!res.ok) {
+            const body = await res.text();
+            console.error('Failed to store OTP in Supabase:', res.status, body);
+            throw new Error(`Connection Error: Could not save OTP state. Please ensure the 'otp_store' table exists in Supabase.`);
+        }
+    } catch (err: any) {
+        console.error('Error in supabaseStoreOtp:', err);
+        throw err;
+    }
 }
 
 // ── SEND OTP ─────────────────────────────────────────────────────────────
