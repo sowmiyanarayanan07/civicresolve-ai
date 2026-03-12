@@ -1,9 +1,12 @@
 // @ts-check
 
 async function supabaseGetOtp(email) {
-    const url = process.env.VITE_SUPABASE_URL;
-    const key = process.env.VITE_SUPABASE_ANON_KEY;
-    if (!url || !key) return null;
+    const url = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
+    const key = process.env.VITE_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY;
+    if (!url || !key) {
+        console.error('[verify-otp] Supabase config missing');
+        return null;
+    }
 
     const res = await fetch(
         `${url}/rest/v1/otp_store?email=eq.${encodeURIComponent(email)}&select=otp,expires_at&limit=1`,
@@ -19,8 +22,8 @@ async function supabaseGetOtp(email) {
 }
 
 async function supabaseDeleteOtp(email) {
-    const url = process.env.VITE_SUPABASE_URL;
-    const key = process.env.VITE_SUPABASE_ANON_KEY;
+    const url = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
+    const key = process.env.VITE_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY;
     if (!url || !key) return;
 
     await fetch(`${url}/rest/v1/otp_store?email=eq.${encodeURIComponent(email)}`, {
