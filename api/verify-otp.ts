@@ -1,24 +1,23 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
+import { createClient } from '@supabase/supabase-js';
 
 /**
  * POST /api/verify-otp
  * Body: { email: string, otp: string }
  * Returns: { valid: boolean }
  *
- * Verifies OTP against the server-side in-memory store set by /api/send-otp.
- * OTP is consumed (deleted) on first successful use.
+ * Verifies OTP from Supabase (shared across serverless instances).
+ * Deletes the OTP on successful verification (one-time use).
  */
 
-// Shared in-memory store — same Map instance within the same Vercel function instance
-// Note: Vercel may spin up multiple instances; for production scale, swap with
-// Supabase table or Vercel KV. For MVP this works fine as OTPs are short-lived.
-declare global {
-    // eslint-disable-next-line no-var
-    var _civicOtpStore: Map<string, { otp: string; expiresAt: number }> | undefined;
+function getSupabase() {
+    const url = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
+    const key = process.env.SUPABASE_SERVICE_ROLE_KEY
+        || process.env.SUPABASE_ANON_KEY
+        || process.env.VITE_SUPABASE_ANON_KEY;
+    if (!url || !key) return null;
+    return createClient(url, key);
 }
-// Reuse across hot-reloads in dev
-global._civicOtpStore = global._civicOtpStore ?? new Map();
-const otpStore = global._civicOtpStore;
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
     res.setHeader('Access-Control-Allow-Origin', process.env.FRONTEND_URL || '*');
@@ -32,16 +31,40 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (!email || !otp) return res.status(400).json({ error: 'email and otp are required', valid: false });
 
     const lower = email.toLowerCase();
-    const entry = otpStore.get(lower);
 
+    // ── Check Supabase store first ────────────────────────────────────────────
+    const sb = getSupabase();
+    if (sb) {
+        const { data, error } = await sb
+            .from('otp_store')
+            .select('otp, expires_at')
+            .eq('email', lower)
+            .single();
+
+        if (error || !data) return res.status(200).json({ valid: false, reason: 'not_found' });
+        if (new Date(data.expires_at) < new Date()) {
+            await sb.from('otp_store').delete().eq('email', lower);
+            return res.status(200).json({ valid: false, reason: 'expired' });
+        }
+        if (data.otp !== otp.trim()) return res.status(200).json({ valid: false, reason: 'wrong_otp' });
+
+        // Consume — one-time use
+        await sb.from('otp_store').delete().eq('email', lower);
+        return res.status(200).json({ valid: true });
+    }
+
+    // ── Fallback: in-process global store (same instance only) ───────────────
+    const store: Map<string, { otp: string; expiresAt: number }> =
+        (global as any)._civicOtpStore ?? new Map();
+
+    const entry = store.get(lower);
     if (!entry) return res.status(200).json({ valid: false, reason: 'not_found' });
     if (Date.now() > entry.expiresAt) {
-        otpStore.delete(lower);
+        store.delete(lower);
         return res.status(200).json({ valid: false, reason: 'expired' });
     }
     if (entry.otp !== otp.trim()) return res.status(200).json({ valid: false, reason: 'wrong_otp' });
 
-    // Consume — one-time use
-    otpStore.delete(lower);
+    store.delete(lower);
     return res.status(200).json({ valid: true });
 }

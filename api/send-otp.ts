@@ -1,23 +1,31 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
+import { createClient } from '@supabase/supabase-js';
 
 /**
  * POST /api/send-otp
- * Body: { email: string, name: string }
+ * Body: { email: string, name?: string }
  *
- * Generates a 6-digit OTP, stores it server-side in memory (with expiry),
- * and sends it via EmailJS using the server-side private keys.
+ * Generates a 6-digit OTP, stores it in Supabase (persisted across
+ * serverless instances), then emails it via EmailJS REST API.
  */
 
-// In-memory OTP store (per Vercel serverless instance; short-lived is fine for OTPs)
-const otpStore = new Map<string, { otp: string; expiresAt: number }>();
-const OTP_TTL = 5 * 60 * 1000; // 5 minutes
+const OTP_TTL_MINUTES = 5;
 
 function makeOtp(): string {
     return Math.floor(100000 + Math.random() * 900000).toString();
 }
 
+function getSupabase() {
+    const url = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
+    const key = process.env.SUPABASE_SERVICE_ROLE_KEY
+        || process.env.SUPABASE_ANON_KEY
+        || process.env.VITE_SUPABASE_ANON_KEY;
+    if (!url || !key) return null;
+    return createClient(url, key);
+}
+
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-    // CORS headers — allow GitHub Pages frontend
+    // CORS — same-origin on Vercel, but keep wildcard for local dev
     res.setHeader('Access-Control-Allow-Origin', process.env.FRONTEND_URL || '*');
     res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
@@ -35,14 +43,28 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const publicKey = process.env.EMAILJS_PUBLIC_KEY;
 
     if (!serviceId || !templateId || !publicKey) {
-        return res.status(500).json({ error: 'Email service not configured on server.' });
+        return res.status(500).json({ error: 'Email service not configured on server. Add EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, EMAILJS_PUBLIC_KEY to Vercel environment variables.' });
     }
 
     const otp = makeOtp();
     const lower = email.toLowerCase();
-    otpStore.set(lower, { otp, expiresAt: Date.now() + OTP_TTL });
+    const expiresAt = new Date(Date.now() + OTP_TTL_MINUTES * 60 * 1000).toISOString();
 
-    // Call EmailJS REST API (server-to-server — privateKey not needed for public key flow)
+    // ── Persist OTP in Supabase ───────────────────────────────────────────────
+    const sb = getSupabase();
+    if (sb) {
+        await sb.from('otp_store').upsert(
+            { email: lower, otp, expires_at: expiresAt },
+            { onConflict: 'email' }
+        );
+    } else {
+        // No Supabase configured — fall back to global in-process store
+        // (works when send-otp and verify-otp run in the same instance)
+        (global as any)._civicOtpStore = (global as any)._civicOtpStore ?? new Map();
+        (global as any)._civicOtpStore.set(lower, { otp, expiresAt: Date.now() + OTP_TTL_MINUTES * 60 * 1000 });
+    }
+
+    // ── Send email via EmailJS REST API ──────────────────────────────────────
     const emailjsPayload = {
         service_id: serviceId,
         template_id: templateId,
@@ -52,7 +74,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             to_email: lower,
             otp,
             app_name: 'CivicResolve AI',
-            expiry: '5 minutes',
+            expiry: `${OTP_TTL_MINUTES} minutes`,
         },
     };
 
