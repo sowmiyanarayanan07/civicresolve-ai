@@ -1,0 +1,144 @@
+import React, { useState, useEffect } from 'react';
+import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { Role, User, Language, Complaint, ComplaintStatus, Location } from './types';
+import { subscribeToComplaints, addComplaint as dbAddComplaint, updateComplaint } from './services/dbService';
+import { signOut, restoreSession } from './services/authService';
+import Login from './components/Login';
+import CitizenDashboard from './components/CitizenDashboard';
+import EmployeeDashboard from './components/EmployeeDashboard';
+import AdminDashboard from './components/AdminDashboard';
+
+const App: React.FC = () => {
+  const [user, setUser] = useState<User | null>(null);
+  const [lang, setLang] = useState<Language>('en');
+  const [complaints, setComplaints] = useState<Complaint[]>([]);
+  const [authLoading, setAuthLoading] = useState(true);
+
+  // Restore session on mount
+  useEffect(() => {
+    const unsub = restoreSession(u => { setUser(u); setAuthLoading(false); });
+    return unsub;
+  }, []);
+
+  // Subscribe to real-time complaints
+  useEffect(() => {
+    const unsub = subscribeToComplaints(setComplaints);
+    return unsub;
+  }, []);
+
+  // ---- Complaint Actions ----
+  const addComplaint = async (c: Complaint) => {
+    await dbAddComplaint(c);
+  };
+
+  const assignEmployee = async (complaintId: string, empId: string) => {
+    await updateComplaint(complaintId, { assignedTo: empId, status: ComplaintStatus.ASSIGNED });
+  };
+
+  const updateStatus = async (complaintId: string, status: ComplaintStatus) => {
+    await updateComplaint(complaintId, { status });
+  };
+
+  const completeTask = async (complaintId: string, proofImage: string) => {
+    await updateComplaint(complaintId, { status: ComplaintStatus.JOB_COMPLETED, completionImage: proofImage });
+  };
+
+  const adminVerify = async (complaintId: string) => {
+    await updateComplaint(complaintId, { status: ComplaintStatus.VERIFIED });
+  };
+
+  const adminReject = async (complaintId: string, reason: string) => {
+    await updateComplaint(complaintId, { status: ComplaintStatus.REJECTED, adminComment: reason });
+  };
+
+  const updateEmployeeLocation = async (complaintId: string, loc: Location) => {
+    await updateComplaint(complaintId, { employeeLocation: loc });
+  };
+
+  const handleLogout = async () => {
+    await signOut();
+    setUser(null);
+  };
+
+  // Show loading screen while restoring auth session
+  if (authLoading) {
+    return (
+      <div className="min-h-screen hero-gradient flex items-center justify-center flex-col gap-4">
+        <div className="w-16 h-16 rounded-2xl bg-white/10 backdrop-blur flex items-center justify-center border border-white/20">
+          <i className="fas fa-city text-white text-3xl"></i>
+        </div>
+        <div className="spinner" style={{ width: 32, height: 32, borderWidth: 3 }}></div>
+        <p className="text-white/70 text-sm">Loading CivicResolve AI...</p>
+      </div>
+    );
+  }
+
+  // Employee sees only their assigned complaints
+  const employeeComplaints = user?.role === Role.EMPLOYEE
+    ? complaints.filter(c => c.assignedTo === 'emp_sai' || c.assignedTo === user.id)
+    : complaints;
+
+  return (
+    <HashRouter>
+      <div className="font-sans text-gray-800">
+        <Routes>
+          <Route path="/"
+            element={
+              !user
+                ? <Login onLogin={setUser} lang={lang} setLang={setLang} />
+                : <Navigate to={user.role === Role.CITIZEN ? '/citizen' : user.role === Role.EMPLOYEE ? '/employee' : '/admin'} />
+            }
+          />
+
+          <Route path="/citizen"
+            element={
+              user?.role === Role.CITIZEN
+                ? <CitizenDashboard
+                  user={user} lang={lang} setLang={setLang}
+                  complaints={complaints.filter(c => c.citizenId === user.id)}
+                  addComplaint={addComplaint}
+                  onLogout={handleLogout}
+                />
+                : <Navigate to="/" />
+            }
+          />
+
+          <Route path="/employee"
+            element={
+              user?.role === Role.EMPLOYEE
+                ? <EmployeeDashboard
+                  user={user} lang={lang} setLang={setLang}
+                  complaints={employeeComplaints}
+                  updateStatus={updateStatus}
+                  updateLocation={updateEmployeeLocation}
+                  completeTask={completeTask}
+                  onLogout={handleLogout}
+                />
+                : <Navigate to="/" />
+            }
+          />
+
+          <Route path="/admin"
+            element={
+              user?.role === Role.ADMIN
+                ? <AdminDashboard
+                  lang={lang} setLang={setLang}
+                  complaints={complaints}
+                  assignEmployee={assignEmployee}
+                  adminVerify={adminVerify}
+                  adminReject={adminReject}
+                  onLogout={handleLogout}
+                />
+                : <Navigate to="/" />
+            }
+          />
+
+          {/* Catch-all redirect */}
+          <Route path="*" element={<Navigate to="/" />} />
+        </Routes>
+      </div>
+    </HashRouter>
+  );
+};
+
+export default App;

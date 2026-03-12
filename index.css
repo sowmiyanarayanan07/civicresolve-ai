@@ -1,0 +1,492 @@
+/* ============================================================
+   CivicResolve AI — Premium Design System
+   Inter (body) + Space Grotesk (headings) via Google Fonts
+   ============================================================ */
+
+:root {
+  --civic-primary:    #4f46e5;  /* indigo-600            */
+  --civic-primary-d:  #3730a3;  /* indigo-800            */
+  --civic-accent:     #6366f1;  /* indigo-500            */
+  --civic-secondary:  #0ea5e9;  /* sky-500               */
+  --civic-success:    #10b981;  /* emerald-500           */
+  --civic-warning:    #f59e0b;  /* amber-500             */
+  --civic-danger:     #ef4444;  /* red-500               */
+  --civic-dark:       #0f172a;  /* slate-900             */
+  --civic-panel:      #1e293b;  /* slate-800             */
+  --civic-border:     rgba(255,255,255,0.08);
+  --civic-text:       #f8fafc;
+  --font-body:        'Inter', system-ui, -apple-system, sans-serif;
+  --font-heading:     'Space Grotesk', 'Inter', sans-serif;
+  --radius:           16px;
+  --transition:       all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* ---- Base ---- */
+*, *::before, *::after { box-sizing: border-box; }
+body {
+  font-family: var(--font-body);
+  background: #f0f4ff;
+  color: #1e293b;
+  margin: 0;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ---- Scrollbar ---- */
+::-webkit-scrollbar        { width: 5px; height: 5px; }
+::-webkit-scrollbar-track  { background: transparent; }
+::-webkit-scrollbar-thumb  { background: #c7d2fe; border-radius: 9999px; }
+
+/* ======================================================
+   HERO GRADIENT — Login background
+   ====================================================== */
+.hero-gradient {
+  background: linear-gradient(145deg, #1e1b4b 0%, #312e81 30%, #1d4ed8 65%, #0e7490 100%);
+  position: relative;
+  overflow: hidden;
+}
+.hero-gradient::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse at 30% 20%, rgba(99,102,241,0.3) 0%, transparent 60%),
+              radial-gradient(ellipse at 80% 80%, rgba(14,165,233,0.2) 0%, transparent 50%);
+}
+
+/* ======================================================
+   GLASSMORPHISM CARDS
+   ====================================================== */
+.glass-card {
+  background: rgba(255, 255, 255, 0.07);
+  backdrop-filter: blur(18px) saturate(1.6);
+  -webkit-backdrop-filter: blur(18px) saturate(1.6);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: var(--radius);
+}
+
+/* ======================================================
+   AUTH FORM PANEL
+   ====================================================== */
+.auth-panel {
+  background: #ffffff;
+  border-radius: 24px;
+  box-shadow: 0 32px 80px rgba(15, 23, 42, 0.18), 0 0 0 1px rgba(79,70,229,0.08);
+}
+
+/* ======================================================
+   ROLE SELECTOR
+   ====================================================== */
+.role-tab {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 12px 4px;
+  border-radius: 12px;
+  border: 2px solid transparent;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 600;
+  color: #64748b;
+  transition: var(--transition);
+  background: transparent;
+}
+.role-tab:hover { background: #f0f4ff; color: var(--civic-primary); }
+.role-tab.active {
+  background: #eef2ff;
+  border-color: var(--civic-primary);
+  color: var(--civic-primary);
+  box-shadow: 0 4px 12px rgba(79,70,229,0.15);
+}
+.role-tab .role-icon {
+  width: 40px; height: 40px;
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 18px;
+  transition: var(--transition);
+}
+.role-tab.active .role-icon { background: var(--civic-primary); color: white; }
+
+/* ======================================================
+   INPUT FIELDS
+   ====================================================== */
+.civic-input {
+  width: 100%;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 12px 16px;
+  font-size: 14px;
+  font-family: var(--font-body);
+  color: #1e293b;
+  background: #f8fafc;
+  transition: var(--transition);
+  outline: none;
+}
+.civic-input:focus {
+  border-color: var(--civic-primary);
+  background: #ffffff;
+  box-shadow: 0 0 0 3px rgba(79,70,229,0.12);
+}
+.civic-input::placeholder { color: #94a3b8; }
+
+.civic-label {
+  display: block;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #475569;
+  margin-bottom: 6px;
+  letter-spacing: 0.02em;
+}
+
+/* ======================================================
+   BUTTONS
+   ====================================================== */
+.btn-primary {
+  width: 100%;
+  padding: 13px 24px;
+  background: linear-gradient(135deg, var(--civic-primary) 0%, #7c3aed 100%);
+  color: white;
+  font-family: var(--font-body);
+  font-weight: 700;
+  font-size: 14px;
+  border: none;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: var(--transition);
+  box-shadow: 0 6px 20px rgba(79,70,229,0.35);
+  position: relative;
+  overflow: hidden;
+}
+.btn-primary:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 10px 28px rgba(79,70,229,0.4);
+}
+.btn-primary:active { transform: translateY(0); }
+.btn-primary:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+.btn-success {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  box-shadow: 0 6px 20px rgba(16,185,129,0.3);
+}
+.btn-success:hover { box-shadow: 0 10px 28px rgba(16,185,129,0.4); }
+
+.btn-danger {
+  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+  box-shadow: 0 6px 20px rgba(239,68,68,0.3);
+}
+
+.btn-outline {
+  background: transparent;
+  border: 1.5px solid #e2e8f0;
+  color: #475569;
+  border-radius: 12px;
+  padding: 12px 24px;
+  font-family: var(--font-body);
+  font-weight: 600;
+  font-size: 14px;
+  cursor: pointer;
+  transition: var(--transition);
+  width: 100%;
+}
+.btn-outline:hover { border-color: var(--civic-primary); color: var(--civic-primary); background: #f0f4ff; }
+
+/* ======================================================
+   DASHBOARD HEADERS
+   ====================================================== */
+.dash-header {
+  background: linear-gradient(90deg, var(--civic-dark) 0%, var(--civic-panel) 100%);
+  color: white;
+  padding: 16px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.12);
+}
+.dash-header-citizen {
+  background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+}
+.dash-header-employee {
+  background: linear-gradient(135deg, #059669 0%, #0284c7 100%);
+}
+.dash-header h1 {
+  font-family: var(--font-heading);
+  font-size: 18px;
+  font-weight: 700;
+  margin: 0;
+}
+
+/* ======================================================
+   STAT CARDS — Admin Sidebar
+   ====================================================== */
+.stat-card {
+  border-radius: 14px;
+  padding: 16px;
+  position: relative;
+  overflow: hidden;
+}
+.stat-card::before {
+  content: '';
+  position: absolute;
+  top: -20px; right: -20px;
+  width: 80px; height: 80px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.06);
+}
+
+/* ======================================================
+   COMPLAINT CARDS
+   ====================================================== */
+.complaint-card {
+  background: white;
+  border-radius: 16px;
+  padding: 16px;
+  border: 1px solid #e2e8f0;
+  transition: var(--transition);
+  cursor: pointer;
+}
+.complaint-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 30px rgba(79,70,229,0.10);
+  border-color: #c7d2fe;
+}
+.complaint-card.selected {
+  border-color: var(--civic-primary);
+  background: #eef2ff;
+  box-shadow: 0 0 0 2px rgba(79,70,229,0.15);
+}
+
+/* ======================================================
+   PRIORITY BADGES
+   ====================================================== */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+.badge-emergency { background: #fef2f2; color: #dc2626; border: 1px solid #fca5a5; }
+.badge-high      { background: #fff7ed; color: #ea580c; border: 1px solid #fdba74; }
+.badge-medium    { background: #fefce8; color: #ca8a04; border: 1px solid #fde047; }
+.badge-low       { background: #f0fdf4; color: #16a34a; border: 1px solid #86efac; }
+
+/* ======================================================
+   GPS BADGE — Citizen form
+   ====================================================== */
+.gps-badge {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  border-radius: 99px;
+  font-size: 12px;
+  font-weight: 600;
+  background: #f0fdf4;
+  color: #16a34a;
+  border: 1px solid #86efac;
+}
+.gps-badge.capturing {
+  background: #eff6ff;
+  color: #2563eb;
+  border-color: #93c5fd;
+}
+@keyframes pulse-gps {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50%       { opacity: 0.6; transform: scale(1.3); }
+}
+.gps-dot {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  background: #16a34a;
+  animation: pulse-gps 1.5s ease-in-out infinite;
+}
+.gps-dot.capturing { background: #2563eb; }
+
+/* ======================================================
+   OFFLINE BANNER
+   ====================================================== */
+.offline-banner {
+  background: linear-gradient(90deg, #92400e, #b45309);
+  color: #fef3c7;
+  text-align: center;
+  padding: 8px 16px;
+  font-size: 12.5px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+/* ======================================================
+   LOADING SPINNER
+   ====================================================== */
+@keyframes spin { to { transform: rotate(360deg); } }
+.spinner {
+  width: 20px; height: 20px;
+  border: 2.5px solid rgba(255,255,255,0.3);
+  border-top-color: white;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+  display: inline-block;
+}
+
+/* ======================================================
+   ADMIN HEATMAP LEGEND
+   ====================================================== */
+.heatmap-legend {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 10px 14px;
+  background: white;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+}
+.heatmap-dot {
+  width: 10px; height: 10px;
+  border-radius: 50%;
+  display: inline-block;
+  margin-right: 5px;
+}
+
+/* ======================================================
+   LANGUAGE TOGGLE
+   ====================================================== */
+.lang-toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border-radius: 999px;
+  background: rgba(255,255,255,0.15);
+  color: white;
+  font-size: 12.5px;
+  font-weight: 700;
+  border: 1px solid rgba(255,255,255,0.25);
+  cursor: pointer;
+  transition: var(--transition);
+  backdrop-filter: blur(8px);
+}
+.lang-toggle:hover { background: rgba(255,255,255,0.25); }
+
+/* ======================================================
+   TASK CARD — Employee
+   ====================================================== */
+.task-card {
+  background: white;
+  border-radius: 18px;
+  padding: 18px;
+  border: 1px solid #e2e8f0;
+  transition: var(--transition);
+  position: relative;
+  overflow: hidden;
+}
+.task-card::before {
+  content: '';
+  position: absolute;
+  left: 0; top: 0; bottom: 0;
+  width: 4px;
+  background: var(--civic-success);
+  border-radius: 4px 0 0 4px;
+}
+.task-card:hover { box-shadow: 0 12px 32px rgba(5,150,105,0.12); transform: translateY(-2px); }
+
+/* ======================================================
+   PROGRESS BAR
+   ====================================================== */
+.progress-bar-bg {
+  background: #e2e8f0;
+  border-radius: 999px;
+  height: 6px;
+  overflow: hidden;
+}
+.progress-bar-fill {
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--civic-primary), var(--civic-secondary));
+  transition: width 0.5s ease;
+}
+
+/* ======================================================
+   BOTTOM NAV — Mobile
+   ====================================================== */
+.bottom-nav {
+  position: fixed;
+  bottom: 0; left: 0; right: 0;
+  background: white;
+  border-top: 1px solid #e2e8f0;
+  display: flex;
+  justify-content: around;
+  padding: 8px 0 12px;
+  z-index: 100;
+  box-shadow: 0 -8px 24px rgba(0,0,0,0.06);
+}
+.bottom-nav button {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  color: #94a3b8;
+  font-size: 11px;
+  font-weight: 600;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 4px 0;
+  transition: var(--transition);
+}
+.bottom-nav button.active { color: var(--civic-primary); }
+.bottom-nav button.active i { filter: drop-shadow(0 2px 4px rgba(79,70,229,0.4)); }
+
+/* ======================================================
+   LEAFLET Z-INDEX FIX
+   ====================================================== */
+.leaflet-container { z-index: 0 !important; }
+.leaflet-pane, .leaflet-top, .leaflet-bottom { z-index: 1 !important; }
+
+/* ======================================================
+   SECTION HEADINGS
+   ====================================================== */
+h1, h2, h3 { font-family: var(--font-heading); }
+
+/* ======================================================
+   FORM section cards
+   ====================================================== */
+.form-section {
+  background: white;
+  border-radius: 16px;
+  padding: 20px;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+}
+
+/* ======================================================
+   ANIMATIONS
+   ====================================================== */
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(16px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.fade-in-up { animation: fadeInUp 0.4s ease both; }
+
+@keyframes slideInRight {
+  from { opacity: 0; transform: translateX(20px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+.slide-in-right { animation: slideInRight 0.35s ease both; }
+
+/* ======================================================
+   MOBILE — ensure full viewport height
+   ====================================================== */
+html, body, #root { min-height: 100dvh; }

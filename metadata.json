@@ -1,0 +1,9 @@
+{
+  "name": "CivicResolve AI",
+  "description": "Intelligent Civic Grievance Management Platform with Live Map Tracking, AI Analysis, and Multilingual Support.",
+  "requestFramePermissions": [
+    "camera",
+    "microphone",
+    "geolocation"
+  ]
+}
