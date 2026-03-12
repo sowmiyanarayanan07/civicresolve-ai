@@ -1,16 +1,6 @@
-import type { VercelRequest, VercelResponse } from '@vercel/node';
+// @ts-check
 
-/**
- * POST /api/verify-otp
- * Body: { email: string, otp: string }
- * Returns: { valid: boolean }
- *
- * Reads OTP from Supabase via REST (no SDK import — avoids bundle issues).
- * Deletes the OTP on successful verification (one-time use).
- */
-
-// ── Supabase REST helpers (no SDK import needed) ──────────────────────────
-async function supabaseGetOtp(email: string): Promise<{ otp: string; expires_at: string } | null> {
+async function supabaseGetOtp(email) {
     const url = process.env.VITE_SUPABASE_URL;
     const key = process.env.VITE_SUPABASE_ANON_KEY;
     if (!url || !key) return null;
@@ -28,7 +18,7 @@ async function supabaseGetOtp(email: string): Promise<{ otp: string; expires_at:
     return Array.isArray(rows) && rows.length > 0 ? rows[0] : null;
 }
 
-async function supabaseDeleteOtp(email: string): Promise<void> {
+async function supabaseDeleteOtp(email) {
     const url = process.env.VITE_SUPABASE_URL;
     const key = process.env.VITE_SUPABASE_ANON_KEY;
     if (!url || !key) return;
@@ -42,7 +32,7 @@ async function supabaseDeleteOtp(email: string): Promise<void> {
     });
 }
 
-export default async function handler(req: VercelRequest, res: VercelResponse) {
+export default async function handler(req, res) {
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
@@ -51,7 +41,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
     try {
-        const { email, otp } = req.body as { email?: string; otp?: string };
+        const body = typeof req.body === 'string' ? JSON.parse(req.body) : req.body;
+        const email = body?.email;
+        const otp = body?.otp;
+
         if (!email || !otp) {
             return res.status(400).json({ error: 'email and otp are required', valid: false });
         }
@@ -68,10 +61,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             return res.status(200).json({ valid: false, reason: 'wrong_otp' });
         }
 
-        // Consume — one-time use
         await supabaseDeleteOtp(lower);
         return res.status(200).json({ valid: true });
-    } catch (err: any) {
+    } catch (err) {
         console.error('[verify-otp] Unhandled error:', err);
         return res.status(500).json({ error: err?.message || 'Internal server error', valid: false });
     }

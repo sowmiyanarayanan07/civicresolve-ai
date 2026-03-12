@@ -1,27 +1,17 @@
-import type { VercelRequest, VercelResponse } from '@vercel/node';
-
-/**
- * POST /api/send-otp
- * Body: { email: string, name?: string }
- *
- * - Generates a 6-digit OTP
- * - Stores it in Supabase via REST (no SDK import — avoids bundle issues)
- * - Sends it via EmailJS REST API
- */
+// @ts-check
 
 const OTP_TTL_MINUTES = 5;
 
-function makeOtp(): string {
+function makeOtp() {
     return Math.floor(100000 + Math.random() * 900000).toString();
 }
 
-// ── Supabase REST helpers (no SDK import needed) ──────────────────────────
-async function supabaseUpsertOtp(email: string, otp: string, expiresAt: string): Promise<void> {
+async function supabaseUpsertOtp(email, otp, expiresAt) {
     const url = process.env.VITE_SUPABASE_URL;
     const key = process.env.VITE_SUPABASE_ANON_KEY;
     if (!url || !key) return;
 
-    await fetch(`${url}/rest/v1/otp_store`, {
+    const res = await fetch(`${url}/rest/v1/otp_store`, {
         method: 'POST',
         headers: {
             'apikey': key,
@@ -31,9 +21,13 @@ async function supabaseUpsertOtp(email: string, otp: string, expiresAt: string):
         },
         body: JSON.stringify({ email, otp, expires_at: expiresAt }),
     });
+    if (!res.ok) {
+        const t = await res.text();
+        console.error('[send-otp] Supabase upsert error:', t);
+    }
 }
 
-export default async function handler(req: VercelRequest, res: VercelResponse) {
+export default async function handler(req, res) {
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
@@ -42,7 +36,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
     try {
-        const { email, name } = req.body as { email?: string; name?: string };
+        const body = typeof req.body === 'string' ? JSON.parse(req.body) : req.body;
+        const email = body?.email;
+        const name = body?.name;
+
         if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
             return res.status(400).json({ error: 'Invalid email address' });
         }
@@ -53,7 +50,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
         if (!serviceId || !templateId || !publicKey) {
             return res.status(500).json({
-                error: 'Email service not configured. Please add EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, EMAILJS_PUBLIC_KEY to Vercel environment variables.'
+                error: 'Email service not configured. Add EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, EMAILJS_PUBLIC_KEY to Vercel environment variables.'
             });
         }
 
@@ -61,10 +58,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         const lower = email.toLowerCase();
         const expiresAt = new Date(Date.now() + OTP_TTL_MINUTES * 60 * 1000).toISOString();
 
-        // Store OTP in Supabase via raw fetch (no SDK)
         await supabaseUpsertOtp(lower, otp, expiresAt);
 
-        // Send email via EmailJS REST API
         const emailRes = await fetch('https://api.emailjs.com/api/v1.0/email/send', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -89,7 +84,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         }
 
         return res.status(200).json({ success: true });
-    } catch (err: any) {
+    } catch (err) {
         console.error('[send-otp] Unhandled error:', err);
         return res.status(500).json({ error: err?.message || 'Internal server error' });
     }
