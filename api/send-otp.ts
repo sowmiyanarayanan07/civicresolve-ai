@@ -17,7 +17,7 @@ function makeOtp(): string {
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-    // CORS headers — allow Netlify frontend
+    // CORS headers — allow GitHub Pages frontend
     res.setHeader('Access-Control-Allow-Origin', process.env.FRONTEND_URL || '*');
     res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
