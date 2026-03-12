@@ -130,7 +130,8 @@ function RoleLoginPanel({
             if (!result.valid) {
                 let msg = 'Invalid OTP. Try again.';
                 if (result.reason === 'expired') msg = 'This OTP has expired. Please resend a new code.';
-                if (result.reason === 'not_found') msg = 'OTP not found. Please resend a new code.';
+                if (result.reason === 'not_found') msg = 'OTP not found in database. Please resend a new code.';
+                if (result.reason === 'config_missing') msg = 'Backend Configuration Error: Supabase keys are missing on Vercel. Please check Vercel Environment Variables.';
                 if (result.reason === 'server_error') msg = 'Server verification error. Please try again.';
                 
                 setError(msg);

@@ -53,10 +53,18 @@ export default async function handler(req, res) {
         }
 
         const lower = email.toLowerCase();
+        
+        // Check config specifically
+        const url = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
+        const key = process.env.VITE_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY;
+        if (!url || !key) {
+             return res.status(200).json({ valid: false, reason: 'config_missing' });
+        }
+
         const entry = await supabaseGetOtp(lower);
 
         if (!entry) {
-            console.log('[verify-otp] No OTP entry found for:', lower);
+            console.log('[verify-otp] No OTP entry found in database for:', lower);
             return res.status(200).json({ valid: false, reason: 'not_found' });
         }
         
