@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description"
+    content="CivicResolve AI — Intelligent Civic Grievance Management Platform with AI prioritization and live map tracking." />
+  <title>CivicResolve AI</title>
+
+  <!-- Google Fonts: Inter + Space Grotesk -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700;800&display=swap"
+    rel="stylesheet">
+
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- Leaflet CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+
+  <!-- Font Awesome -->
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet" />
+
+  <!-- App CSS (design system) -->
+  <script type="module" crossorigin src="/civicresolve-ai/assets/index-BfSig5NO.js"></script>
+  <link rel="stylesheet" crossorigin href="/civicresolve-ai/assets/index-YdcbK__z.css">
+</head>
+
+<body>
+  <!-- Apple Mobile Polyfills (prevents white screen with Node packages like Gemini) -->
+  <script>
+    if (typeof global === "undefined") {
+      window.global = window;
+    }
+    if (typeof process === "undefined") {
+      window.process = { env: {} };
+    }
+  </script>
+  <div id="root"></div>
+</body>
+
+</html>
