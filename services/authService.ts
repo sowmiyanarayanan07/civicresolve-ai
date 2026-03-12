@@ -3,7 +3,11 @@ import { getSupabaseClient } from './supabaseConfig';
 
 // ─── localStorage session helpers ─────────────────────────────────────────
 function persist(u: User) {
-    localStorage.setItem('civic_current_user', JSON.stringify(u));
+    try {
+        localStorage.setItem('civic_current_user', JSON.stringify(u));
+    } catch (e) {
+        console.warn('localStorage blocked by browser:', e);
+    }
 }
 
 function loadCitizensLS(): Record<string, User> {
@@ -82,8 +86,13 @@ export const signOut = async (): Promise<void> => {
 };
 
 export const restoreSession = (cb: (u: User | null) => void): (() => void) => {
-    const raw = localStorage.getItem('civic_current_user');
-    setTimeout(() => cb(raw ? JSON.parse(raw) : null), 0);
+    try {
+        const raw = localStorage.getItem('civic_current_user');
+        setTimeout(() => cb(raw ? JSON.parse(raw) : null), 0);
+    } catch (e) {
+        console.warn('localStorage blocked by browser:', e);
+        setTimeout(() => cb(null), 0);
+    }
     return () => { };
 };
 
