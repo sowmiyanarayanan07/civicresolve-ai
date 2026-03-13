@@ -103,17 +103,58 @@ export async function sendOtp(email: string, name: string = 'User'): Promise<voi
 
 // ── VERIFY OTP ───────────────────────────────────────────────────────────
 export async function verifyOtpAsync(email: string, entered: string): Promise<{ valid: boolean; reason?: string }> {
-    const apiBase = (typeof process !== 'undefined' && process.env?.VITE_VERCEL_API_URL) || import.meta.env.VITE_VERCEL_API_URL || '';
+    const { url, key } = getSupabaseConfig();
+    if (!url || !key) {
+        return { valid: false, reason: 'config_missing' };
+    }
 
     try {
-        const res = await fetch(`${apiBase}/api/verify-otp`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ email: email.toLowerCase(), otp: entered }),
-        });
+        const lower = email.toLowerCase();
+        const res = await fetch(
+            `${url}/rest/v1/otp_store?email=eq.${encodeURIComponent(lower)}&select=otp,expires_at&limit=1`,
+            {
+                method: 'GET',
+                headers: {
+                    'apikey': key,
+                    'Authorization': `Bearer ${key}`
+                }
+            }
+        );
+
         if (!res.ok) return { valid: false, reason: 'server_error' };
-        const json = await res.json();
-        return { valid: json.valid === true, reason: json.reason };
+        
+        const rows = await res.json();
+        const entry = Array.isArray(rows) && rows.length > 0 ? rows[0] : null;
+
+        if (!entry) {
+            return { valid: false, reason: 'not_found' };
+        }
+
+        const now = new Date();
+        const expiry = new Date(entry.expires_at);
+
+        // Delete function
+        const deleteOtp = async () => {
+            await fetch(`${url}/rest/v1/otp_store?email=eq.${encodeURIComponent(lower)}`, {
+                method: 'DELETE',
+                headers: {
+                    'apikey': key,
+                    'Authorization': `Bearer ${key}`
+                }
+            });
+        };
+
+        if (expiry < now) {
+            await deleteOtp();
+            return { valid: false, reason: 'expired' };
+        }
+
+        if (entry.otp.trim() !== entered.trim()) {
+            return { valid: false, reason: 'wrong_otp' };
+        }
+
+        await deleteOtp();
+        return { valid: true };
     } catch (err: any) {
         return { valid: false, reason: 'connection_error' };
     }
