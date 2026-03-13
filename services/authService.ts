@@ -20,7 +20,7 @@ function saveCitizenLS(u: User) {
     localStorage.setItem('civic_citizens', JSON.stringify(all));
 }
 
-// ─── Called after OTP is verified (by Vercel API or local verify) ────────
+// ─── Called after OTP is verified (by local verify) ────────
 export async function loginWithOtp(email: string, name?: string, role: Role = Role.CITIZEN): Promise<User> {
     const lower = email.toLowerCase();
     const sb = getSupabaseClient();

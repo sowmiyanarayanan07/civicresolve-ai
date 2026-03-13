@@ -66,15 +66,15 @@ export async function sendOtp(email: string, name: string = 'User'): Promise<voi
     // 3. Fallback to hardcoded strings to guarantee delivery
     const serviceId = (typeof process !== 'undefined' && process.env?.VITE_EMAILJS_SERVICE_ID) 
         || (import.meta as any).env?.VITE_EMAILJS_SERVICE_ID 
-        || 'service_on7vb7p';
+        || 'service_y622gxc';
 
     const templateId = (typeof process !== 'undefined' && process.env?.VITE_EMAILJS_TEMPLATE_ID) 
         || (import.meta as any).env?.VITE_EMAILJS_TEMPLATE_ID 
-        || 'template_fjx647h';
+        || 'template_fyn9g89';
 
     const publicKey = (typeof process !== 'undefined' && process.env?.VITE_EMAILJS_PUBLIC_KEY) 
         || (import.meta as any).env?.VITE_EMAILJS_PUBLIC_KEY 
-        || 'cSWmq888t26hiykHV';
+        || 'jkxFbxcK9UIAHHtaO';
 
     console.log('--- EmailJS Diagnostics ---');
     console.log('Service ID:', serviceId);

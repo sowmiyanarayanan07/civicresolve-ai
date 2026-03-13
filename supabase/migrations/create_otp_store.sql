@@ -1,5 +1,5 @@
 -- Run this in Supabase SQL Editor: https://supabase.com/dashboard/project/_/sql
--- Creates the otp_store table used by the Vercel API for shared OTP state
+-- Creates the otp_store table used for shared OTP state
 
 create table if not exists public.otp_store (
   email      text primary key,
