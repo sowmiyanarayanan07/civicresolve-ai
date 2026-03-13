@@ -83,6 +83,7 @@ export async function sendOtp(email: string, name: string = 'User'): Promise<voi
 
     // 2. Send email from browser via EmailJS (this is what EmailJS is built for)
     try {
+        emailjs.init({ publicKey });
         await emailjs.send(
             serviceId,
             templateId,
@@ -92,8 +93,7 @@ export async function sendOtp(email: string, name: string = 'User'): Promise<voi
                 otp,
                 app_name: 'CivicResolve AI',
                 expiry: `${OTP_TTL_MINUTES} minutes`,
-            },
-            publicKey
+            }
         );
     } catch (err: any) {
         const msg = err?.text ?? (err instanceof Error ? err.message : String(err));
