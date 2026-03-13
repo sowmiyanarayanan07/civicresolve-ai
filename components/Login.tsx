@@ -16,11 +16,12 @@ interface LoginProps {
 
 /* ─── OTP Box sub-component ──────────────────────────────────────── */
 function OtpBoxes({
-    digits, onChange, onKeyDown, refs
+    digits, onChange, onKeyDown, onPaste, refs
 }: {
     digits: string[];
     onChange: (i: number, v: string) => void;
     onKeyDown: (i: number, e: React.KeyboardEvent<HTMLInputElement>) => void;
+    onPaste: (e: React.ClipboardEvent<HTMLInputElement>) => void;
     refs: React.MutableRefObject<(HTMLInputElement | null)[]>;
 }) {
     return (
@@ -35,6 +36,7 @@ function OtpBoxes({
                     value={d}
                     onChange={e => onChange(i, e.target.value)}
                     onKeyDown={e => onKeyDown(i, e)}
+                    onPaste={onPaste}
                     className="w-12 h-14 text-center text-xl font-bold rounded-xl border-2 border-slate-200 focus:border-indigo-500 focus:outline-none transition-all bg-white shadow-sm"
                     style={d ? { borderColor: 'var(--role-color)' } : {}}
                 />
@@ -94,6 +96,15 @@ function RoleLoginPanel({
         }
     }
 
+    function handlePaste(e: React.ClipboardEvent<HTMLInputElement>) {
+        e.preventDefault();
+        const pasted = e.clipboardData.getData('text').trim();
+        if (!/^\d{6}$/.test(pasted)) return;
+        setDigits(pasted.split(''));
+        setError('');
+        inputRefs.current[5]?.focus();
+    }
+
     /* ── Step 1: Send OTP ── */
     async function handleSend(e: React.FormEvent) {
         e.preventDefault();
@@ -130,8 +141,8 @@ function RoleLoginPanel({
             if (!result.valid) {
                 let msg = 'Invalid OTP. Try again.';
                 if (result.reason === 'expired') msg = 'This OTP has expired. Please resend a new code.';
-                if (result.reason === 'not_found') msg = 'OTP not found in database. Please resend a new code.';
-                if (result.reason === 'config_missing') msg = 'Backend Configuration Error: Supabase keys are missing on Vercel. Please check Vercel Environment Variables.';
+                if (result.reason === 'not_found') msg = 'OTP not found in database. Did you refresh the page? Please resend a new code.';
+                if (result.reason === 'config_missing') msg = 'Deployment Configuration Error: Supabase keys are missing. Please check your GitHub Secrets (VITE_SUPABASE_URL, etc.) or .env.local and redeploy.';
                 if (result.reason === 'server_error') msg = 'Server verification error. Please try again.';
                 
                 setError(msg);
@@ -239,7 +250,7 @@ function RoleLoginPanel({
                     {/* Digit boxes */}
                     <div>
                         <label className="civic-label mb-3">{t.enter_otp}</label>
-                        <OtpBoxes digits={digits} onChange={handleDigit} onKeyDown={handleKey} refs={inputRefs} />
+                        <OtpBoxes digits={digits} onChange={handleDigit} onKeyDown={handleKey} onPaste={handlePaste} refs={inputRefs} />
                     </div>
 
                     <button
