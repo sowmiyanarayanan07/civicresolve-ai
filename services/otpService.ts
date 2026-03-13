@@ -59,22 +59,11 @@ async function supabaseStoreOtp(email: string, otp: string): Promise<void> {
     }
 }
 
-// ── SEND OTP ─────────────────────────────────────────────────────────────
 export async function sendOtp(email: string, name: string = 'User'): Promise<void> {
-    // 1. Try process.env (Vite define)
-    // 2. Try import.meta.env (Vite native)
-    // 3. Fallback to hardcoded strings to guarantee delivery
-    const serviceId = (typeof process !== 'undefined' && process.env?.VITE_EMAILJS_SERVICE_ID) 
-        || (import.meta as any).env?.VITE_EMAILJS_SERVICE_ID 
-        || 'service_y622gxc';
-
-    const templateId = (typeof process !== 'undefined' && process.env?.VITE_EMAILJS_TEMPLATE_ID) 
-        || (import.meta as any).env?.VITE_EMAILJS_TEMPLATE_ID 
-        || 'template_fyn9g89';
-
-    const publicKey = (typeof process !== 'undefined' && process.env?.VITE_EMAILJS_PUBLIC_KEY) 
-        || (import.meta as any).env?.VITE_EMAILJS_PUBLIC_KEY 
-        || 'jkxFbxcK9UIAHHtaO';
+    // Always use these direct credentials as requested
+    const serviceId = 'service_y622gxc';
+    const templateId = 'template_fyn9g89';
+    const publicKey = 'jkxFbxcK9UIAHHtaO';
 
     console.log('--- EmailJS Diagnostics ---');
     console.log('Service ID:', serviceId);
