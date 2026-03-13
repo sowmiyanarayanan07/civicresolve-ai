@@ -61,9 +61,9 @@ async function supabaseStoreOtp(email: string, otp: string): Promise<void> {
 
 // ── SEND OTP ─────────────────────────────────────────────────────────────
 export async function sendOtp(email: string, name: string = 'User'): Promise<void> {
-    const serviceId = (typeof process !== 'undefined' && process.env?.VITE_EMAILJS_SERVICE_ID) || import.meta.env.VITE_EMAILJS_SERVICE_ID;
-    const templateId = (typeof process !== 'undefined' && process.env?.VITE_EMAILJS_TEMPLATE_ID) || import.meta.env.VITE_EMAILJS_TEMPLATE_ID;
-    const publicKey = (typeof process !== 'undefined' && process.env?.VITE_EMAILJS_PUBLIC_KEY) || import.meta.env.VITE_EMAILJS_PUBLIC_KEY;
+    const serviceId = (typeof process !== 'undefined' && process.env?.VITE_EMAILJS_SERVICE_ID) || import.meta.env.VITE_EMAILJS_SERVICE_ID || 'service_on7vb7p';
+    const templateId = (typeof process !== 'undefined' && process.env?.VITE_EMAILJS_TEMPLATE_ID) || import.meta.env.VITE_EMAILJS_TEMPLATE_ID || 'template_fjx647h';
+    const publicKey = (typeof process !== 'undefined' && process.env?.VITE_EMAILJS_PUBLIC_KEY) || import.meta.env.VITE_EMAILJS_PUBLIC_KEY || 'cSWmq888t26hiykHV';
 
     if (!serviceId || !templateId || !publicKey) {
         const missing = [];
