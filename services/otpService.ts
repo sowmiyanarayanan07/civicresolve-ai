@@ -61,18 +61,29 @@ async function supabaseStoreOtp(email: string, otp: string): Promise<void> {
 
 // ── SEND OTP ─────────────────────────────────────────────────────────────
 export async function sendOtp(email: string, name: string = 'User'): Promise<void> {
-    const serviceId = (typeof process !== 'undefined' && process.env?.VITE_EMAILJS_SERVICE_ID) || import.meta.env.VITE_EMAILJS_SERVICE_ID || 'service_on7vb7p';
-    const templateId = (typeof process !== 'undefined' && process.env?.VITE_EMAILJS_TEMPLATE_ID) || import.meta.env.VITE_EMAILJS_TEMPLATE_ID || 'template_fjx647h';
-    const publicKey = (typeof process !== 'undefined' && process.env?.VITE_EMAILJS_PUBLIC_KEY) || import.meta.env.VITE_EMAILJS_PUBLIC_KEY || 'cSWmq888t26hiykHV';
+    // 1. Try process.env (Vite define)
+    // 2. Try import.meta.env (Vite native)
+    // 3. Fallback to hardcoded strings to guarantee delivery
+    const serviceId = (typeof process !== 'undefined' && process.env?.VITE_EMAILJS_SERVICE_ID) 
+        || (import.meta as any).env?.VITE_EMAILJS_SERVICE_ID 
+        || 'service_on7vb7p';
+
+    const templateId = (typeof process !== 'undefined' && process.env?.VITE_EMAILJS_TEMPLATE_ID) 
+        || (import.meta as any).env?.VITE_EMAILJS_TEMPLATE_ID 
+        || 'template_fjx647h';
+
+    const publicKey = (typeof process !== 'undefined' && process.env?.VITE_EMAILJS_PUBLIC_KEY) 
+        || (import.meta as any).env?.VITE_EMAILJS_PUBLIC_KEY 
+        || 'cSWmq888t26hiykHV';
+
+    console.log('--- EmailJS Diagnostics ---');
+    console.log('Service ID:', serviceId);
+    console.log('Template ID:', templateId);
+    console.log('Public Key length:', publicKey?.length);
+    console.log('---------------------------');
 
     if (!serviceId || !templateId || !publicKey) {
-        const missing = [];
-        if (!serviceId) missing.push('EMAILJS_SERVICE_ID');
-        if (!templateId) missing.push('EMAILJS_TEMPLATE_ID');
-        if (!publicKey) missing.push('EMAILJS_PUBLIC_KEY');
-        
-        console.error('EmailJS Configuration Error:', { serviceId, templateId, publicKey });
-        throw new Error(`EmailJS not configured in build. Missing: ${missing.join(', ')}. Please double check Vercel Env Vars and REDEPLOY.`);
+        throw new Error(`EmailJS config missing! S:${!!serviceId} T:${!!templateId} P:${!!publicKey}`);
     }
 
     const otp = makeOtp();
@@ -81,7 +92,7 @@ export async function sendOtp(email: string, name: string = 'User'): Promise<voi
     // 1. Store OTP in Supabase first (so API can verify it later)
     await supabaseStoreOtp(lower, otp);
 
-    // 2. Send email from browser via EmailJS (this is what EmailJS is built for)
+    // 2. Send email from browser via EmailJS
     try {
         await emailjs.send(
             serviceId,
