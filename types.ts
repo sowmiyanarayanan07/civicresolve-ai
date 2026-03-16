@@ -31,6 +31,7 @@ export interface Location {
 export interface Complaint {
   id: string;
   citizenId?: string;        // Links complaint to user
+  citizenEmail?: string;     // Links complaint to citizen email
   title: string;
   description: string;
   image?: string;            // Base64 or URL
@@ -59,6 +60,15 @@ export interface User {
 }
 
 export type Language = 'en' | 'ta'; // English | Tamil
+
+export interface Employee {
+  id: string;
+  name: string;
+  email: string;
+  department: string;
+  phone?: string;
+  availabilityStatus?: string;
+}
 
 export interface ChatMessage {
   id: string;

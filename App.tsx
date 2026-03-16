@@ -95,7 +95,7 @@ const App: React.FC = () => {
               user?.role === Role.CITIZEN
                 ? <CitizenDashboard
                   user={user} lang={lang} setLang={setLang}
-                  complaints={complaints.filter(c => c.citizenId === user.id)}
+                  complaints={complaints.filter(c => c.citizenEmail === user.email || c.citizenId === user.id)}
                   addComplaint={addComplaint}
                   onLogout={handleLogout}
                 />

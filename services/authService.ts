@@ -26,6 +26,19 @@ export async function loginWithOtp(email: string, name?: string, role: Role = Ro
     const sb = getSupabaseClient();
 
     if (sb) {
+        // Enforce role-based access
+        if (role === Role.ADMIN) {
+            const { data: adminData } = await sb.from('admins').select('*').eq('email', lower).maybeSingle();
+            if (!adminData) {
+                throw new Error("You are not authorized as Admin.");
+            }
+        } else if (role === Role.EMPLOYEE) {
+            const { data: empData } = await sb.from('employees').select('*').eq('email', lower).maybeSingle();
+            if (!empData) {
+                throw new Error("You are not registered as an Employee.");
+            }
+        }
+
         // Try Supabase users table
         const { data: existing } = await sb.from('users').select('*').eq('email', lower).maybeSingle();
         if (existing) {

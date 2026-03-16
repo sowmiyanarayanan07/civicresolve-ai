@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Complaint, ComplaintStatus, Language, Priority } from '../types';
 import { TRANSLATIONS, MOCK_EMPLOYEES, PRIORITY_COLORS, STATUS_COLORS } from '../constants';
 import MapComponent from './MapComponent';
+import { getEmployees, addEmployee as dbAddEmployee, deleteEmployee as dbDeleteEmployee, Employee as DBEmployee } from '../services/dbService';
 
 interface Props {
     lang: Language;
@@ -15,22 +16,82 @@ interface Props {
 
 const AdminDashboard: React.FC<Props> = ({ lang, setLang, complaints, assignEmployee, adminVerify, adminReject, onLogout }) => {
     const [selected, setSelected] = useState<Complaint | null>(null);
-    const [tab, setTab] = useState<'new' | 'verify' | 'all'>('new');
+    const [tab, setTab] = useState<'new' | 'verify' | 'all' | 'employees' | 'critical' | 'resolved'>('all');
     const [rejectReason, setRejectReason] = useState('');
     const t = TRANSLATIONS[lang];
 
+    // Employee Management State
+    const [employees, setEmployees] = useState<DBEmployee[]>([]);
+    const [loadingEmployees, setLoadingEmployees] = useState(false);
+    const [empName, setEmpName] = useState('');
+    const [empEmail, setEmpEmail] = useState('');
+    const [empPhone, setEmpPhone] = useState('');
+    const [empDept, setEmpDept] = useState('');
+    const [addingEmp, setAddingEmp] = useState(false);
+    const [empError, setEmpError] = useState('');
+
+    React.useEffect(() => {
+        fetchEmployees();
+    }, []);
+
+    const fetchEmployees = async () => {
+        setLoadingEmployees(true);
+        try {
+            const data = await getEmployees();
+            setEmployees(data);
+        } catch (e: any) {
+            console.error(e);
+            setEmpError(e.message || "Failed to fetch employees");
+        } finally {
+            setLoadingEmployees(false);
+        }
+    };
+
+    const handleAddEmployee = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!empName || !empEmail || !empDept || !empPhone) return;
+        setAddingEmp(true);
+        setEmpError('');
+        try {
+            await dbAddEmployee(empName, empEmail, empDept, empPhone);
+            setEmpName('');
+            setEmpEmail('');
+            setEmpPhone('');
+            setEmpDept('');
+            await fetchEmployees();
+        } catch (e: any) {
+            console.error(e);
+            setEmpError(e.message || "Failed to add employee");
+        } finally {
+            setAddingEmp(false);
+        }
+    };
+
+    const handleDeleteEmployee = async (id: string) => {
+        if (!window.confirm("Are you sure you want to delete this employee?")) return;
+        try {
+            await dbDeleteEmployee(id);
+            await fetchEmployees();
+        } catch (e: any) {
+            console.error(e);
+            setEmpError(e.message || "Failed to delete employee");
+        }
+    };
+
     // Heatmap stats
     const statsData = [
-        { label: t.total, value: complaints.length, icon: 'fa-layer-group', bg: 'bg-slate-700', dot: '#6366f1' },
-        { label: t.unassigned_stat, value: complaints.filter(c => !c.assignedTo).length, icon: 'fa-inbox', bg: 'bg-indigo-800', dot: '#818cf8' },
-        { label: t.verify_pending, value: complaints.filter(c => c.status === ComplaintStatus.JOB_COMPLETED).length, icon: 'fa-hourglass-half', bg: 'bg-yellow-700', dot: '#fbbf24' },
-        { label: t.critical, value: complaints.filter(c => c.priority === Priority.EMERGENCY || c.priority === Priority.HIGH).length, icon: 'fa-triangle-exclamation', bg: 'bg-red-800', dot: '#f87171' },
-        { label: t.resolved, value: complaints.filter(c => c.status === ComplaintStatus.VERIFIED).length, icon: 'fa-circle-check', bg: 'bg-emerald-800', dot: '#34d399' },
+        { id: 'all', label: t.total, value: complaints.length, icon: 'fa-layer-group', bg: 'bg-slate-700', dot: '#6366f1' },
+        { id: 'new', label: t.unassigned_stat, value: complaints.filter(c => !c.assignedTo).length, icon: 'fa-inbox', bg: 'bg-indigo-800', dot: '#818cf8' },
+        { id: 'verify', label: t.verify_pending, value: complaints.filter(c => c.status === ComplaintStatus.JOB_COMPLETED).length, icon: 'fa-hourglass-half', bg: 'bg-yellow-700', dot: '#fbbf24' },
+        { id: 'critical', label: t.critical, value: complaints.filter(c => c.priority === Priority.EMERGENCY || c.priority === Priority.HIGH).length, icon: 'fa-triangle-exclamation', bg: 'bg-red-800', dot: '#f87171' },
+        { id: 'resolved', label: t.resolved, value: complaints.filter(c => c.status === ComplaintStatus.VERIFIED).length, icon: 'fa-circle-check', bg: 'bg-emerald-800', dot: '#34d399' },
     ];
 
     const filteredComplaints = complaints.filter(c => {
         if (tab === 'new') return !c.assignedTo && c.status !== ComplaintStatus.VERIFIED;
         if (tab === 'verify') return c.status === ComplaintStatus.JOB_COMPLETED;
+        if (tab === 'critical') return c.priority === Priority.EMERGENCY || c.priority === Priority.HIGH;
+        if (tab === 'resolved') return c.status === ComplaintStatus.VERIFIED;
         return true;
     });
 
@@ -64,7 +125,9 @@ const AdminDashboard: React.FC<Props> = ({ lang, setLang, complaints, assignEmpl
                     {/* Stats Grid */}
                     <div className="grid grid-cols-2 md:grid-cols-1 gap-2 mb-4">
                         {statsData.map(s => (
-                            <div key={s.label} className={`stat-card ${s.bg}/40 border border-white/5`}>
+                            <div key={s.label} 
+                                onClick={() => setTab(s.id as any)}
+                                className={`stat-card cursor-pointer transition-all hover:scale-[1.02] ${tab === s.id ? `ring-2 ring-indigo-400 ${s.bg}/80` : `${s.bg}/40 border border-white/5`}`}>
                                 <div className="flex items-center justify-between mb-1">
                                     <p className="text-xs text-slate-400 uppercase tracking-wider">{s.label}</p>
                                     <i className={`fas ${s.icon} text-slate-400 text-xs`}></i>
@@ -121,11 +184,11 @@ const AdminDashboard: React.FC<Props> = ({ lang, setLang, complaints, assignEmpl
                     {/* --- Left: Complaint List --- */}
                     <div className="border-r border-slate-700/50 flex flex-col overflow-hidden">
                         {/* Tabs */}
-                        <div className="flex gap-1 p-3 border-b border-slate-700/50 bg-slate-800">
-                            {(['new', 'verify', 'all'] as const).map(tb => (
+                        <div className="flex gap-1 p-3 border-b border-slate-700/50 bg-slate-800 flex-wrap">
+                            {(['new', 'verify', 'all', 'employees'] as const).map(tb => (
                                 <button key={tb} onClick={() => setTab(tb)}
-                                    className={`flex-1 py-1.5 text-xs font-semibold rounded-lg transition-all capitalize ${tab === tb ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-white hover:bg-slate-700'}`}>
-                                    {tb === 'new' ? t.tabs_new : tb === 'verify' ? t.tabs_verify : t.tabs_all}
+                                    className={`flex-1 py-1.5 px-2 text-xs font-semibold rounded-lg transition-all capitalize whitespace-nowrap ${tab === tb ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-white hover:bg-slate-700'}`}>
+                                    {tb === 'new' ? t.tabs_new : tb === 'verify' ? t.tabs_verify : tb === 'all' ? t.tabs_all : 'Employees'}
                                     {tb === 'new' && complaints.filter(c => !c.assignedTo && c.status !== ComplaintStatus.VERIFIED).length > 0 && (
                                         <span className="ml-1.5 bg-indigo-400 text-[10px] px-1.5 rounded-full">
                                             {complaints.filter(c => !c.assignedTo && c.status !== ComplaintStatus.VERIFIED).length}
@@ -137,32 +200,79 @@ const AdminDashboard: React.FC<Props> = ({ lang, setLang, complaints, assignEmpl
 
                         {/* List */}
                         <div className="flex-1 overflow-y-auto p-3 space-y-2">
-                            {filteredComplaints.length === 0 && (
-                                <div className="text-center py-10 text-slate-500">
-                                    <i className="fas fa-inbox text-3xl block mb-2"></i>
-                                    <p className="text-sm">{t.no_complaints_here}</p>
+                            {tab !== 'employees' ? (
+                                <>
+                                    {filteredComplaints.length === 0 && (
+                                        <div className="text-center py-10 text-slate-500">
+                                            <i className="fas fa-inbox text-3xl block mb-2"></i>
+                                            <p className="text-sm">{t.no_complaints_here}</p>
+                                        </div>
+                                    )}
+                                    {filteredComplaints.map(c => (
+                                        <div key={c.id}
+                                            onClick={() => { setSelected(c); setRejectReason(''); }}
+                                            className={`complaint-card bg-slate-700/60 border-slate-600/50 hover:border-indigo-400 cursor-pointer ${selected?.id === c.id ? 'border-indigo-400 bg-indigo-900/30' : ''}`}>
+                                            <div className="flex justify-between items-start">
+                                                <div className="flex-1 pr-2">
+                                                    <p className="font-semibold text-sm text-slate-100">{c.title}</p>
+                                                    <p className="text-xs text-slate-400 mt-0.5">{c.category}</p>
+                                                </div>
+                                                <span className={priorityBadgeClass(c.priority)}>{c.priority}</span>
+                                            </div>
+                                            <div className="flex items-center justify-between mt-2">
+                                                <p className="text-[11px] text-slate-500">{c.status}</p>
+                                                {c.status === ComplaintStatus.JOB_COMPLETED && (
+                                                    <span className="badge badge-medium text-[10px]">{t.verify_badge}</span>
+                                                )}
+                                                {c.assignedTo && <span className="text-[11px] text-emerald-400"><i className="fas fa-user-check mr-1"></i>{t.assigned_badge}</span>}
+                                            </div>
+                                        </div>
+                                    ))}
+                                </>
+                            ) : (
+                                <div className="space-y-3">
+                                    <h3 className="text-sm font-bold text-slate-300 px-1">Employee Directory</h3>
+                                    {loadingEmployees ? (
+                                        <div className="text-center py-10 text-slate-500">
+                                            <i className="fas fa-spinner fa-spin text-2xl mb-2"></i>
+                                            <p className="text-xs">Loading employees...</p>
+                                        </div>
+                                    ) : employees.length === 0 ? (
+                                        <div className="text-center py-10 text-slate-500 border border-dashed border-slate-600 rounded-xl">
+                                            <p className="text-sm">No employees found.</p>
+                                        </div>
+                                    ) : (
+                                        employees.map(emp => {
+                                            const assignedCount = complaints.filter(c => c.assignedTo === emp.id && c.status !== ComplaintStatus.VERIFIED).length;
+                                            return (
+                                                <div key={emp.id} className="bg-slate-700/50 p-3 rounded-xl border border-slate-600/50 flex flex-col gap-2 group relative">
+                                                    <div className="flex justify-between items-start">
+                                                        <div>
+                                                            <p className="text-sm font-bold text-slate-200 flex items-center gap-2">
+                                                                {emp.name}
+                                                                <span className={`w-2 h-2 rounded-full ${emp.availabilityStatus === 'Available' ? 'bg-emerald-400' : 'bg-red-400'}`}></span>
+                                                            </p>
+                                                            <p className="text-xs text-slate-400 mt-0.5"><i className="fas fa-envelope mr-1"></i> {emp.email}</p>
+                                                            {emp.phone && <p className="text-xs text-slate-400 mt-0.5"><i className="fas fa-phone mr-1"></i> {emp.phone}</p>}
+                                                        </div>
+                                                        <button onClick={() => handleDeleteEmployee(emp.id)} className="w-8 h-8 rounded-lg bg-red-900/30 text-red-400 border border-red-800/30 hover:bg-red-600 hover:text-white transition-all opacity-0 group-hover:opacity-100 flex items-center justify-center absolute top-3 right-3">
+                                                            <i className="fas fa-trash-can text-xs"></i>
+                                                        </button>
+                                                    </div>
+                                                    <div className="flex items-center gap-2 mt-1">
+                                                        <span className="text-[10px] bg-indigo-900/50 text-indigo-300 px-2 py-0.5 rounded-md border border-indigo-700/30 uppercase tracking-wider font-semibold">
+                                                            {emp.department}
+                                                        </span>
+                                                        <span className="text-[10px] bg-slate-800 text-slate-300 px-2 py-0.5 rounded-md border border-slate-600/50">
+                                                            <i className="fas fa-clipboard-list mr-1"></i> {assignedCount} Assigned
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                            );
+                                        })
+                                    )}
                                 </div>
                             )}
-                            {filteredComplaints.map(c => (
-                                <div key={c.id}
-                                    onClick={() => { setSelected(c); setRejectReason(''); }}
-                                    className={`complaint-card bg-slate-700/60 border-slate-600/50 hover:border-indigo-400 cursor-pointer ${selected?.id === c.id ? 'border-indigo-400 bg-indigo-900/30' : ''}`}>
-                                    <div className="flex justify-between items-start">
-                                        <div className="flex-1 pr-2">
-                                            <p className="font-semibold text-sm text-slate-100">{c.title}</p>
-                                            <p className="text-xs text-slate-400 mt-0.5">{c.category}</p>
-                                        </div>
-                                        <span className={priorityBadgeClass(c.priority)}>{c.priority}</span>
-                                    </div>
-                                    <div className="flex items-center justify-between mt-2">
-                                        <p className="text-[11px] text-slate-500">{c.status}</p>
-                                        {c.status === ComplaintStatus.JOB_COMPLETED && (
-                                            <span className="badge badge-medium text-[10px]">{t.verify_badge}</span>
-                                        )}
-                                        {c.assignedTo && <span className="text-[11px] text-emerald-400"><i className="fas fa-user-check mr-1"></i>{t.assigned_badge}</span>}
-                                    </div>
-                                </div>
-                            ))}
                         </div>
                     </div>
 
@@ -172,7 +282,55 @@ const AdminDashboard: React.FC<Props> = ({ lang, setLang, complaints, assignEmpl
                             <h2 className="font-bold text-slate-100" style={{ fontFamily: 'Space Grotesk' }}>{t.action_details}</h2>
                         </div>
 
-                        {selected ? (
+                        {tab === 'employees' ? (
+                            <div className="flex-1 overflow-y-auto p-5">
+                                <div className="glass-card p-5 rounded-2xl border border-indigo-500/30 bg-indigo-900/10 max-w-sm mx-auto mt-4">
+                                    <h3 className="text-lg font-bold text-white mb-1"><i className="fas fa-user-plus mr-2 text-indigo-400"></i>Add Employee</h3>
+                                    <p className="text-xs text-slate-400 mb-5">Register a new field worker into the system.</p>
+                                    
+                                    {empError && (
+                                        <div className="mb-4 p-3 bg-red-900/50 border border-red-500/50 rounded-lg text-xs text-red-200">
+                                            <i className="fas fa-triangle-exclamation mr-1.5"></i>{empError}
+                                        </div>
+                                    )}
+
+                                    <form onSubmit={handleAddEmployee} className="space-y-4">
+                                        <div>
+                                            <label className="block text-[11px] font-semibold text-slate-400 uppercase tracking-wide mb-1">Full Name</label>
+                                            <input type="text" required value={empName} onChange={e => setEmpName(e.target.value)}
+                                                className="w-full bg-slate-800 border border-slate-600 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-400 transition-all placeholder-slate-500"
+                                                placeholder="e.g. Ramesh Kumar" />
+                                        </div>
+                                        <div>
+                                            <label className="block text-[11px] font-semibold text-slate-400 uppercase tracking-wide mb-1">Email Address</label>
+                                            <input type="email" required value={empEmail} onChange={e => setEmpEmail(e.target.value)}
+                                                className="w-full bg-slate-800 border border-slate-600 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-400 transition-all placeholder-slate-500"
+                                                placeholder="worker@civicresolve.in" />
+                                        </div>
+                                        <div>
+                                            <label className="block text-[11px] font-semibold text-slate-400 uppercase tracking-wide mb-1">Phone Number</label>
+                                            <input type="tel" required value={empPhone} onChange={e => setEmpPhone(e.target.value)}
+                                                className="w-full bg-slate-800 border border-slate-600 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-400 transition-all placeholder-slate-500"
+                                                placeholder="e.g. 9876543210" />
+                                        </div>
+                                        <div>
+                                            <label className="block text-[11px] font-semibold text-slate-400 uppercase tracking-wide mb-1">Department / Specialty</label>
+                                            <select required value={empDept} onChange={e => setEmpDept(e.target.value)}
+                                                className="w-full bg-slate-800 border border-slate-600 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-400 transition-all placeholder-slate-500 appearance-none">
+                                                <option value="" disabled>Select Department</option>
+                                                <option value="light">Light</option>
+                                                <option value="pothole">Pothole</option>
+                                                <option value="drainage">Drainage</option>
+                                                <option value="water_supply">Water Supply</option>
+                                            </select>
+                                        </div>
+                                        <button type="submit" disabled={addingEmp} className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-2.5 rounded-xl text-sm transition-all shadow-lg shadow-indigo-600/20 disabled:opacity-50 mt-2">
+                                            {addingEmp ? <><i className="fas fa-spinner fa-spin mr-2"></i>Adding...</> : <><i className="fas fa-plus mr-2"></i>Register Employee</>}
+                                        </button>
+                                    </form>
+                                </div>
+                            </div>
+                        ) : selected ? (
                             <div className="flex-1 overflow-y-auto p-4 space-y-4">
                                 {/* Complaint Info */}
                                 <div className="bg-slate-700/50 rounded-xl p-4 border border-slate-600/50">
@@ -227,17 +385,17 @@ const AdminDashboard: React.FC<Props> = ({ lang, setLang, complaints, assignEmpl
                                 {!selected.assignedTo && selected.status !== ComplaintStatus.VERIFIED && (
                                     <div className="space-y-2">
                                         <p className="text-sm font-semibold text-slate-200">{t.assign_employee}</p>
-                                        {MOCK_EMPLOYEES.map(emp => (
+                                        {(employees.length > 0 ? employees : MOCK_EMPLOYEES).map((emp: any) => (
                                             <button key={emp.id}
                                                 onClick={() => { assignEmployee(selected.id, emp.id); setSelected(null); }}
                                                 className="w-full flex items-center justify-between bg-slate-700/60 hover:bg-emerald-900/40 border border-slate-600 hover:border-emerald-500/50 px-4 py-3 rounded-xl transition-all">
                                                 <div className="flex items-center gap-3">
                                                     <div className="w-8 h-8 rounded-full bg-emerald-700 flex items-center justify-center text-sm font-bold">
-                                                        {emp.name[0]}
+                                                        {emp.name ? emp.name[0].toUpperCase() : '?'}
                                                     </div>
                                                     <div className="text-left">
                                                         <p className="font-semibold text-slate-100 text-sm">{emp.name}</p>
-                                                        <p className="text-xs text-slate-400">{emp.specialty}</p>
+                                                        <p className="text-xs text-slate-400">{emp.department || emp.specialty}</p>
                                                     </div>
                                                 </div>
                                                 <span className="text-xs bg-emerald-900/60 text-emerald-400 border border-emerald-600/30 px-2 py-1 rounded-full">{t.available}</span>

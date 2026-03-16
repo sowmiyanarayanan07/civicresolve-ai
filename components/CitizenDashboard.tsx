@@ -62,6 +62,7 @@ const CitizenDashboard: React.FC<Props> = ({ user, lang, setLang, complaints, ad
         const newComplaint: Complaint = {
             id: `C-${Date.now()}`,
             citizenId: user.id,
+            citizenEmail: user.email,
             title,
             description: desc,
             image: image || undefined,

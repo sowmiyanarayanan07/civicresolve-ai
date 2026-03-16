@@ -55,7 +55,7 @@ export const analyzeComplaint = async (
             category: { type: Type.STRING, description: "e.g., Road, Water, Garbage, Electricity" },
             priority: { type: Type.STRING, enum: ["Low", "Medium", "High", "Emergency"] },
             reason: { type: Type.STRING },
-            department: { type: Type.STRING },
+            department: { type: Type.STRING, enum: ["light", "pothole", "drainage", "water_supply"] },
             estimatedTime: { type: Type.STRING, description: "e.g., 24 hours" },
           },
           required: ["category", "priority", "reason", "department", "estimatedTime"],
