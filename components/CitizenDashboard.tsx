@@ -275,7 +275,7 @@ const CitizenDashboard: React.FC<Props> = ({ user, lang, setLang, complaints, ad
                                         <i className="fas fa-tag"></i> {c.category}
                                     </span>
                                     <span className={`font-semibold ${STATUS_COLORS[c.status] || 'text-slate-600'}`}>
-                                        {c.status}
+                                        Status: {c.status}
                                     </span>
                                 </div>
 
@@ -291,20 +291,22 @@ const CitizenDashboard: React.FC<Props> = ({ user, lang, setLang, complaints, ad
                                     </div>
                                 )}
 
-                                {/* Live tracking mini-map */}
-                                {c.employeeLocation && ![ComplaintStatus.VERIFIED, ComplaintStatus.REJECTED, ComplaintStatus.JOB_COMPLETED].includes(c.status) && (
+                                {/* Issue tracking mini-map — always show if location exists */}
+                                {c.location && (
                                     <div className="h-32 mt-3 rounded-xl overflow-hidden relative border border-indigo-100">
                                         <MapComponent
                                             center={c.location}
                                             markers={[
                                                 { position: c.location, title: 'Issue', type: 'complaint' },
-                                                { position: c.employeeLocation, title: 'Worker', type: 'employee' }
+                                                ...(c.employeeLocation ? [{ position: c.employeeLocation, title: 'Worker', type: 'employee' as const }] : [])
                                             ]}
                                             zoom={14}
                                         />
-                                        <div className="absolute bottom-2 right-2 bg-white px-2 py-1 text-xs rounded-lg shadow font-bold text-indigo-700">
-                                            <i className="fas fa-clock mr-1"></i>{t.eta_5min}
-                                        </div>
+                                        {c.employeeLocation && (
+                                            <div className="absolute bottom-2 right-2 bg-white px-2 py-1 text-xs rounded-lg shadow font-bold text-indigo-700">
+                                                <i className="fas fa-clock mr-1"></i>{t.eta_5min}
+                                            </div>
+                                        )}
                                     </div>
                                 )}
                             </div>

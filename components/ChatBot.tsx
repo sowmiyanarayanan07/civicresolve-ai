@@ -33,17 +33,28 @@ const ChatBot: React.FC<ChatBotProps> = ({ userLocation }) => {
     setInput('');
     setIsLoading(true);
 
-    const response = await chatWithMaps(userMsg.text, userLocation);
-    
-    const botMsg: ChatMessage = {
-      id: (Date.now() + 1).toString(),
-      role: 'model',
-      text: response.text || "Sorry, I couldn't understand.",
-      timestamp: Date.now()
-    };
+    try {
+      const response = await chatWithMaps(userMsg.text, userLocation);
 
-    setMessages(prev => [...prev, botMsg]);
-    setIsLoading(false);
+      const botMsg: ChatMessage = {
+        id: (Date.now() + 1).toString(),
+        role: 'model',
+        text: response.text || "Sorry, I couldn't generate a response.",
+        timestamp: Date.now()
+      };
+      setMessages(prev => [...prev, botMsg]);
+    } catch (err: any) {
+      // Surface the exact SDK / network error so it's immediately visible
+      const errMsg: ChatMessage = {
+        id: (Date.now() + 1).toString(),
+        role: 'model',
+        text: `⚠️ Error: ${err?.message || String(err)}`,
+        timestamp: Date.now()
+      };
+      setMessages(prev => [...prev, errMsg]);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
