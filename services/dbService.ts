@@ -227,3 +227,16 @@ export const deleteEmployee = async (id: string): Promise<void> => {
     if (error) throw new Error(error.message);
 };
 
+// ─── ADMIN: CLEAR ALL COMPLAINTS ─────────────────────────────────────────
+export const deleteAllComplaints = async (): Promise<void> => {
+    const sb = getSupabaseClient();
+    if (!sb) {
+        lsSet([]);
+        lsNotify();
+        return;
+    }
+    const { error } = await sb.from('complaints').delete().neq('id', '');
+    if (error) throw new Error(`[Supabase] deleteAllComplaints: ${error.message}`);
+};
+
+

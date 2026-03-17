@@ -54,31 +54,39 @@ const CitizenDashboard: React.FC<Props> = ({ user, lang, setLang, complaints, ad
         }
     };
 
+    const [submitError, setSubmitError] = useState('');
+
     const handleSubmit = async () => {
         if (!title.trim() || !desc.trim()) return;
         setIsAnalyzing(true);
-        const base64Data = image ? image.split(',')[1] : undefined;
-        const analysis = await analyzeComplaint(title, desc, base64Data, `${location.lat},${location.lng}`);
-        const newComplaint: Complaint = {
-            id: `C-${Date.now()}`,
-            citizenId: user.id,
-            citizenEmail: user.email,
-            title,
-            description: desc,
-            image: image || undefined,
-            location,
-            category: analysis?.category || 'General',
-            priority: analysis?.priority || Priority.LOW,
-            status: ComplaintStatus.SUBMITTED,
-            createdAt: Date.now(),
-            aiAnalysis: analysis
-                ? { reason: analysis.reason, department: analysis.department, estimatedTime: analysis.estimatedTime }
-                : undefined,
-        };
-        addComplaint(newComplaint);
-        setIsAnalyzing(false);
-        setView('list');
-        setTitle(''); setDesc(''); setImage(null); setGpsCaptured(false);
+        setSubmitError('');
+        try {
+            const base64Data = image ? image.split(',')[1] : undefined;
+            const analysis = await analyzeComplaint(title, desc, base64Data, `${location.lat},${location.lng}`);
+            const newComplaint: Complaint = {
+                id: `C-${Date.now()}`,
+                citizenId: user.id,
+                citizenEmail: user.email,
+                title,
+                description: desc,
+                image: image || undefined,
+                location,
+                category: analysis?.category || 'General',
+                priority: analysis?.priority || Priority.LOW,
+                status: ComplaintStatus.SUBMITTED,
+                createdAt: Date.now(),
+                aiAnalysis: analysis
+                    ? { reason: analysis.reason, department: analysis.department, estimatedTime: analysis.estimatedTime }
+                    : undefined,
+            };
+            await addComplaint(newComplaint);  // ← await ensures state updates before view switch
+            setTitle(''); setDesc(''); setImage(null); setGpsCaptured(false);
+            setView('list');
+        } catch (err: any) {
+            setSubmitError(err?.message || 'Failed to submit complaint. Please try again.');
+        } finally {
+            setIsAnalyzing(false);
+        }
     };
 
     const priorityBadgeClass = (p: Priority) => {
@@ -235,6 +243,14 @@ const CitizenDashboard: React.FC<Props> = ({ user, lang, setLang, complaints, ad
                                 />
                             </div>
                         </div>
+
+                        {/* Submit Error */}
+                        {submitError && (
+                            <div className="p-3 bg-red-50 border border-red-200 text-red-700 rounded-xl text-sm flex items-start gap-2">
+                                <i className="fas fa-triangle-exclamation mt-0.5 flex-shrink-0"></i>
+                                <span>{submitError}</span>
+                            </div>
+                        )}
 
                         {/* Submit */}
                         <button

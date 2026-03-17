@@ -11,10 +11,11 @@ interface Props {
     assignEmployee: (complaintId: string, empId: string) => void;
     adminVerify: (complaintId: string) => void;
     adminReject: (complaintId: string, reason: string) => void;
+    clearAllComplaints: () => Promise<void>;
     onLogout: () => void;
 }
 
-const AdminDashboard: React.FC<Props> = ({ lang, setLang, complaints, assignEmployee, adminVerify, adminReject, onLogout }) => {
+const AdminDashboard: React.FC<Props> = ({ lang, setLang, complaints, assignEmployee, adminVerify, adminReject, clearAllComplaints, onLogout }) => {
     const [selected, setSelected] = useState<Complaint | null>(null);
     const [tab, setTab] = useState<'new' | 'verify' | 'all' | 'employees' | 'critical' | 'resolved'>('all');
     const [rejectReason, setRejectReason] = useState('');
@@ -154,14 +155,27 @@ const AdminDashboard: React.FC<Props> = ({ lang, setLang, complaints, assignEmpl
                     </div>
                 </div>
 
-                <div className="mt-auto pt-4 flex gap-2">
-                    <button onClick={() => setLang(lang === 'en' ? 'ta' : 'en')} className="lang-toggle flex-1 text-center">
-                        <i className="fas fa-language text-xs"></i>
-                        {lang === 'en' ? 'தமிழ்' : 'EN'}
+                <div className="mt-auto pt-4 space-y-2">
+                    {/* Clear All Complaints */}
+                    <button
+                        onClick={async () => {
+                            if (window.confirm('Delete ALL complaints permanently? This cannot be undone.')) {
+                                await clearAllComplaints();
+                            }
+                        }}
+                        className="w-full bg-red-900/20 hover:bg-red-900/40 text-red-400 hover:text-red-300 border border-red-800/30 px-3 py-2 rounded-xl text-xs font-semibold transition-all"
+                    >
+                        <i className="fas fa-trash-can mr-1"></i> Clear All Complaints
                     </button>
-                    <button onClick={onLogout} className="flex-1 bg-red-600/20 hover:bg-red-600/40 text-red-400 hover:text-red-300 border border-red-500/30 px-4 py-2 rounded-xl text-sm font-semibold transition-all">
-                        <i className="fas fa-right-from-bracket mr-1"></i> {t.logout}
-                    </button>
+                    <div className="flex gap-2">
+                        <button onClick={() => setLang(lang === 'en' ? 'ta' : 'en')} className="lang-toggle flex-1 text-center">
+                            <i className="fas fa-language text-xs"></i>
+                            {lang === 'en' ? 'தமிழ்' : 'EN'}
+                        </button>
+                        <button onClick={onLogout} className="flex-1 bg-red-600/20 hover:bg-red-600/40 text-red-400 hover:text-red-300 border border-red-500/30 px-4 py-2 rounded-xl text-sm font-semibold transition-all">
+                            <i className="fas fa-right-from-bracket mr-1"></i> {t.logout}
+                        </button>
+                    </div>
                 </div>
             </aside>
 
@@ -237,12 +251,8 @@ const AdminDashboard: React.FC<Props> = ({ lang, setLang, complaints, assignEmpl
                                             <i className="fas fa-spinner fa-spin text-2xl mb-2"></i>
                                             <p className="text-xs">Loading employees...</p>
                                         </div>
-                                    ) : employees.length === 0 ? (
-                                        <div className="text-center py-10 text-slate-500 border border-dashed border-slate-600 rounded-xl">
-                                            <p className="text-sm">No employees found.</p>
-                                        </div>
                                     ) : (
-                                        employees.map(emp => {
+                                        (employees.length > 0 ? employees : MOCK_EMPLOYEES).map((emp: any) => {
                                             const assignedCount = complaints.filter(c => c.assignedTo === emp.id && c.status !== ComplaintStatus.VERIFIED).length;
                                             return (
                                                 <div key={emp.id} className="bg-slate-700/50 p-3 rounded-xl border border-slate-600/50 flex flex-col gap-2 group relative">
@@ -250,7 +260,7 @@ const AdminDashboard: React.FC<Props> = ({ lang, setLang, complaints, assignEmpl
                                                         <div>
                                                             <p className="text-sm font-bold text-slate-200 flex items-center gap-2">
                                                                 {emp.name}
-                                                                <span className={`w-2 h-2 rounded-full ${emp.availabilityStatus === 'Available' ? 'bg-emerald-400' : 'bg-red-400'}`}></span>
+                                                                <span className={`w-2 h-2 rounded-full ${(!emp.availabilityStatus || emp.availabilityStatus === 'Available') ? 'bg-emerald-400' : 'bg-red-400'}`}></span>
                                                             </p>
                                                             <p className="text-xs text-slate-400 mt-0.5"><i className="fas fa-envelope mr-1"></i> {emp.email}</p>
                                                             {emp.phone && <p className="text-xs text-slate-400 mt-0.5"><i className="fas fa-phone mr-1"></i> {emp.phone}</p>}
@@ -261,7 +271,7 @@ const AdminDashboard: React.FC<Props> = ({ lang, setLang, complaints, assignEmpl
                                                     </div>
                                                     <div className="flex items-center gap-2 mt-1">
                                                         <span className="text-[10px] bg-indigo-900/50 text-indigo-300 px-2 py-0.5 rounded-md border border-indigo-700/30 uppercase tracking-wider font-semibold">
-                                                            {emp.department}
+                                                            {emp.department || emp.specialty}
                                                         </span>
                                                         <span className="text-[10px] bg-slate-800 text-slate-300 px-2 py-0.5 rounded-md border border-slate-600/50">
                                                             <i className="fas fa-clipboard-list mr-1"></i> {assignedCount} Assigned
@@ -381,6 +391,31 @@ const AdminDashboard: React.FC<Props> = ({ lang, setLang, complaints, assignEmpl
                                     </div>
                                 )}
 
+                                {/* ASSIGNED EMPLOYEE DETAILS */}
+                                {selected.assignedTo && selected.status !== ComplaintStatus.VERIFIED && (() => {
+                                    const assignedEmp = [...employees, ...MOCK_EMPLOYEES].find((e: any) => e.id === selected.assignedTo);
+                                    return assignedEmp ? (
+                                        <div className="bg-emerald-900/20 border border-emerald-600/30 rounded-xl p-4">
+                                            <p className="text-xs text-emerald-400 uppercase tracking-wider font-semibold mb-2">
+                                                <i className="fas fa-user-check mr-1"></i> Assigned Worker
+                                            </p>
+                                            <div className="flex items-center gap-3">
+                                                <div className="w-10 h-10 rounded-full bg-emerald-700 flex items-center justify-center text-sm font-bold text-white flex-shrink-0">
+                                                    {assignedEmp.name?.[0]?.toUpperCase() || '?'}
+                                                </div>
+                                                <div>
+                                                    <p className="font-bold text-slate-100 text-sm">{assignedEmp.name}</p>
+                                                    <p className="text-xs text-slate-400">{assignedEmp.department || (assignedEmp as any).specialty}</p>
+                                                    {assignedEmp.email && <p className="text-xs text-slate-500">{assignedEmp.email}</p>}
+                                                    {assignedEmp.phone && <p className="text-xs text-slate-500"><i className="fas fa-phone mr-1"></i>{assignedEmp.phone}</p>}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ) : (
+                                        <p className="text-xs text-slate-400">Assigned to: <code className="text-indigo-300">{selected.assignedTo}</code></p>
+                                    );
+                                })()}
+
                                 {/* ASSIGN SECTION */}
                                 {!selected.assignedTo && selected.status !== ComplaintStatus.VERIFIED && (
                                     <div className="space-y-2">
@@ -388,7 +423,7 @@ const AdminDashboard: React.FC<Props> = ({ lang, setLang, complaints, assignEmpl
                                         {(employees.length > 0 ? employees : MOCK_EMPLOYEES).map((emp: any) => (
                                             <button key={emp.id}
                                                 onClick={() => { assignEmployee(selected.id, emp.id); setSelected(null); }}
-                                                className="w-full flex items-center justify-between bg-slate-700/60 hover:bg-emerald-900/40 border border-slate-600 hover:border-emerald-500/50 px-4 py-3 rounded-xl transition-all">
+                                                className="w-full flex items-center justify-between bg-slate-700/60 hover:bg-emerged-900/40 hover:bg-emerald-900/40 border border-slate-600 hover:border-emerald-500/50 px-4 py-3 rounded-xl transition-all">
                                                 <div className="flex items-center gap-3">
                                                     <div className="w-8 h-8 rounded-full bg-emerald-700 flex items-center justify-center text-sm font-bold">
                                                         {emp.name ? emp.name[0].toUpperCase() : '?'}

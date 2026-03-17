@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { Role, User, Language, Complaint, ComplaintStatus, Location } from './types';
-import { subscribeToComplaints, addComplaint as dbAddComplaint, updateComplaint } from './services/dbService';
+import { subscribeToComplaints, addComplaint as dbAddComplaint, updateComplaint, deleteAllComplaints as dbDeleteAllComplaints } from './services/dbService';
 import { signOut, restoreSession } from './services/authService';
 import Login from './components/Login';
 import CitizenDashboard from './components/CitizenDashboard';
@@ -51,6 +51,10 @@ const App: React.FC = () => {
     await updateComplaint(complaintId, { status: ComplaintStatus.REJECTED, adminComment: reason });
   };
 
+  const clearAllComplaints = async () => {
+    await dbDeleteAllComplaints();
+  };
+
   const updateEmployeeLocation = async (complaintId: string, loc: Location) => {
     await updateComplaint(complaintId, { employeeLocation: loc });
   };
@@ -95,7 +99,11 @@ const App: React.FC = () => {
               user?.role === Role.CITIZEN
                 ? <CitizenDashboard
                   user={user} lang={lang} setLang={setLang}
-                  complaints={complaints.filter(c => c.citizenEmail === user.email || c.citizenId === user.id)}
+                  complaints={complaints.filter(c =>
+                    // Email is the primary reliable key; fall back to id
+                    (c.citizenEmail && c.citizenEmail.toLowerCase() === user.email.toLowerCase())
+                    || c.citizenId === user.id
+                  )}
                   addComplaint={addComplaint}
                   onLogout={handleLogout}
                 />
@@ -127,6 +135,7 @@ const App: React.FC = () => {
                   assignEmployee={assignEmployee}
                   adminVerify={adminVerify}
                   adminReject={adminReject}
+                  clearAllComplaints={clearAllComplaints}
                   onLogout={handleLogout}
                 />
                 : <Navigate to="/" />

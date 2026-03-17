@@ -129,8 +129,8 @@ Be concise, friendly, and practical. If asked about specific locations or office
       text: response.text,
       grounding: null,
     };
-  } catch (error) {
+  } catch (error: any) {
     console.error("Chat Error:", error);
-    return { text: "Sorry, I couldn't process that request. Please check the Gemini API key in your .env.local file.", grounding: null };
+    return { text: `Sorry, I couldn't process that request. (${error.message || 'Error'})`, grounding: null };
   }
 };
