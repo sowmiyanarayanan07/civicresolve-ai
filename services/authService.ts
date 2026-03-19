@@ -26,6 +26,8 @@ export async function loginWithOtp(email: string, name?: string, role: Role = Ro
     const sb = getSupabaseClient();
 
     if (sb) {
+        let employeeDbId: string | null = null;
+
         // Enforce role-based access
         if (role === Role.ADMIN) {
             const { data: adminData } = await sb.from('admins').select('*').eq('email', lower).maybeSingle();
@@ -37,13 +39,16 @@ export async function loginWithOtp(email: string, name?: string, role: Role = Ro
             if (!empData) {
                 throw new Error("You are not registered as an Employee.");
             }
+            // Store employee's DB UUID — used as user.id so complaint filtering works
+            employeeDbId = empData.id;
         }
 
         // Try Supabase users table
         const { data: existing } = await sb.from('users').select('*').eq('email', lower).maybeSingle();
         if (existing) {
             const u: User = {
-                id: existing.id,
+                // For employees, always use their employee UUID so assignedTo matches
+                id: employeeDbId ?? existing.id,
                 name: existing.name,
                 email: existing.email,
                 role,
@@ -56,8 +61,9 @@ export async function loginWithOtp(email: string, name?: string, role: Role = Ro
         }
 
         // New user — insert into Supabase
+        // For employees use their actual employee UUID so complaints match
         const newUser: User = {
-            id: `usr-${Date.now()}`,
+            id: employeeDbId ?? `usr-${Date.now()}`,
             name: name?.trim() || lower.split('@')[0],
             email: lower,
             role,

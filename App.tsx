@@ -77,9 +77,9 @@ const App: React.FC = () => {
     );
   }
 
-  // Employee sees only their assigned complaints
+  // Employee sees only their assigned complaints (matched by user.id or user.email)
   const employeeComplaints = user?.role === Role.EMPLOYEE
-    ? complaints.filter(c => c.assignedTo === 'emp_sai' || c.assignedTo === user.id)
+    ? complaints.filter(c => c.assignedTo === user.id || c.assignedTo === user.email)
     : complaints;
 
   return (
