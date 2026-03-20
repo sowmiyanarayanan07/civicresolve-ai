@@ -19,6 +19,15 @@
   --font-heading:     'Space Grotesk', 'Inter', sans-serif;
   --radius:           16px;
   --transition:       all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+
+  /* ── Citizen green theme ── */
+  --citizen-primary:   #16a34a;  /* green-600             */
+  --citizen-primary-d: #15803d;  /* green-700             */
+  --citizen-accent:    #22c55e;  /* green-500             */
+  --citizen-light:     #f0fdf4;  /* green-50              */
+  --citizen-muted:     #dcfce7;  /* green-100             */
+  --citizen-border:    #86efac;  /* green-300             */
+  --citizen-glow:      rgba(22,163,74,0.20);
 }
 
 /* ---- Base ---- */
@@ -40,7 +49,7 @@ body {
    HERO GRADIENT — Login background
    ====================================================== */
 .hero-gradient {
-  background: linear-gradient(145deg, #1e1b4b 0%, #312e81 30%, #1d4ed8 65%, #0e7490 100%);
+  background: linear-gradient(155deg, #052e16 0%, #14532d 30%, #166534 60%, #15803d 85%, #16a34a 100%);
   position: relative;
   overflow: hidden;
 }
@@ -48,8 +57,9 @@ body {
   content: '';
   position: absolute;
   inset: 0;
-  background: radial-gradient(ellipse at 30% 20%, rgba(99,102,241,0.3) 0%, transparent 60%),
-              radial-gradient(ellipse at 80% 80%, rgba(14,165,233,0.2) 0%, transparent 50%);
+  background: radial-gradient(ellipse at 25% 20%, rgba(34,197,94,0.25) 0%, transparent 55%),
+              radial-gradient(ellipse at 80% 75%, rgba(16,185,129,0.20) 0%, transparent 50%),
+              radial-gradient(ellipse at 60% 0%,  rgba(74,222,128,0.12) 0%, transparent 40%);
 }
 
 /* ======================================================
@@ -211,7 +221,8 @@ body {
   box-shadow: 0 4px 20px rgba(0,0,0,0.12);
 }
 .dash-header-citizen {
-  background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+  background: linear-gradient(135deg, #15803d 0%, #16a34a 45%, #22c55e 100%);
+  box-shadow: 0 4px 24px rgba(22,163,74,0.30);
 }
 .dash-header-employee {
   background: linear-gradient(135deg, #059669 0%, #0284c7 100%);
@@ -449,6 +460,10 @@ body {
 .bottom-nav button.active { color: var(--civic-primary); }
 .bottom-nav button.active i { filter: drop-shadow(0 2px 4px rgba(79,70,229,0.4)); }
 
+/* ── Citizen-specific bottom-nav green override ── */
+.citizen-bottom-nav button.active { color: var(--citizen-primary); }
+.citizen-bottom-nav button.active i { filter: drop-shadow(0 2px 4px rgba(22,163,74,0.4)); }
+
 /* ======================================================
    LEAFLET Z-INDEX FIX
    ====================================================== */
@@ -490,3 +505,222 @@ h1, h2, h3 { font-family: var(--font-heading); }
    MOBILE — ensure full viewport height
    ====================================================== */
 html, body, #root { min-height: 100dvh; }
+
+/* ======================================================
+   CITIZEN GREEN THEME OVERRIDES
+   ====================================================== */
+
+/* Citizen background */
+.citizen-bg {
+  background: linear-gradient(160deg, #f0fdf4 0%, #dcfce7 40%, #f0fdf4 100%);
+  min-height: 100dvh;
+}
+
+/* Citizen step circles */
+.citizen-step {
+  width: 26px; height: 26px;
+  border-radius: 50%;
+  background: var(--citizen-primary);
+  color: white;
+  font-size: 12px;
+  font-weight: 700;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+  box-shadow: 0 2px 8px var(--citizen-glow);
+}
+
+/* Citizen form section */
+.citizen-form-section {
+  background: white;
+  border-radius: 18px;
+  padding: 20px;
+  border: 1.5px solid #dcfce7;
+  box-shadow: 0 4px 16px rgba(22,163,74,0.07);
+  transition: var(--transition);
+}
+.citizen-form-section:hover {
+  border-color: var(--citizen-border);
+  box-shadow: 0 6px 20px rgba(22,163,74,0.12);
+}
+
+/* Citizen input focus */
+.citizen-input {
+  width: 100%;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 12px 16px;
+  font-size: 14px;
+  font-family: var(--font-body);
+  color: #1e293b;
+  background: #f8fafc;
+  transition: var(--transition);
+  outline: none;
+}
+.citizen-input:focus {
+  border-color: var(--citizen-primary);
+  background: #ffffff;
+  box-shadow: 0 0 0 3px rgba(22,163,74,0.14);
+}
+.citizen-input::placeholder { color: #94a3b8; }
+
+/* Citizen submit button */
+.btn-citizen {
+  width: 100%;
+  padding: 14px 24px;
+  background: linear-gradient(135deg, #15803d 0%, #16a34a 50%, #22c55e 100%);
+  color: white;
+  font-family: var(--font-body);
+  font-weight: 700;
+  font-size: 15px;
+  letter-spacing: 0.02em;
+  border: none;
+  border-radius: 14px;
+  cursor: pointer;
+  transition: var(--transition);
+  box-shadow: 0 6px 20px rgba(22,163,74,0.35);
+  position: relative;
+  overflow: hidden;
+}
+.btn-citizen::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, transparent 0%, rgba(255,255,255,0.12) 100%);
+  border-radius: inherit;
+}
+.btn-citizen:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 32px rgba(22,163,74,0.42);
+}
+.btn-citizen:active { transform: translateY(0); }
+.btn-citizen:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+/* Citizen complaint card */
+.citizen-card {
+  background: white;
+  border-radius: 18px;
+  padding: 18px;
+  border: 1.5px solid #dcfce7;
+  transition: var(--transition);
+  position: relative;
+  overflow: hidden;
+}
+.citizen-card::before {
+  content: '';
+  position: absolute;
+  left: 0; top: 0; bottom: 0;
+  width: 4px;
+  background: linear-gradient(to bottom, var(--citizen-primary), var(--citizen-accent));
+  border-radius: 4px 0 0 4px;
+}
+.citizen-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 30px rgba(22,163,74,0.14);
+  border-color: var(--citizen-border);
+}
+
+/* Citizen AI analysis pill */
+.citizen-ai-pill {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  background: var(--citizen-light);
+  border: 1px solid var(--citizen-muted);
+  border-radius: 10px;
+  color: var(--citizen-primary-d);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+/* Citizen empty state */
+.citizen-empty {
+  text-align: center;
+  padding: 60px 16px;
+}
+.citizen-empty-icon {
+  width: 80px; height: 80px;
+  border-radius: 50%;
+  background: var(--citizen-muted);
+  display: flex; align-items: center; justify-content: center;
+  margin: 0 auto 16px;
+  font-size: 32px;
+  color: var(--citizen-primary);
+}
+
+/* Citizen section heading */
+.citizen-section-title {
+  font-family: var(--font-heading);
+  font-size: 18px;
+  font-weight: 800;
+  color: #166534;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.citizen-section-title .title-icon {
+  width: 36px; height: 36px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, var(--citizen-primary), var(--citizen-accent));
+  color: white;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 16px;
+  box-shadow: 0 4px 10px var(--citizen-glow);
+}
+
+/* Citizen photo upload zone */
+.citizen-upload-zone {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background: var(--citizen-light);
+  border: 2px dashed var(--citizen-border);
+  border-radius: 14px;
+  padding: 14px;
+  cursor: pointer;
+  transition: var(--transition);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--citizen-primary);
+}
+.citizen-upload-zone:hover {
+  background: var(--citizen-muted);
+  border-color: var(--citizen-primary);
+}
+
+/* GPS badge green */
+.gps-badge-green {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  border-radius: 99px;
+  font-size: 12px;
+  font-weight: 600;
+  background: var(--citizen-light);
+  color: var(--citizen-primary);
+  border: 1px solid var(--citizen-border);
+}
+
+/* Map border green */
+.citizen-map-border { border: 1.5px solid var(--citizen-border); border-radius: 14px; overflow: hidden; }
+
+/* Citizen header user greeting pill */
+.citizen-greeting {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: rgba(255,255,255,0.90);
+  background: rgba(255,255,255,0.18);
+  border-radius: 999px;
+  padding: 4px 12px;
+  backdrop-filter: blur(6px);
+  border: 1px solid rgba(255,255,255,0.25);
+}

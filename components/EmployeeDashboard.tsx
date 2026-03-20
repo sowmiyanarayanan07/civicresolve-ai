@@ -110,6 +110,14 @@ const EmployeeDashboard: React.FC<Props> = ({ user, lang, setLang, complaints, u
                     <p className="text-xs text-emerald-200 mt-0.5">{user.name}</p>
                 </div>
                 <div className="flex items-center gap-2">
+                    <button
+                        onClick={() => window.location.hash = '#/about'}
+                        className="text-white/90 hover:text-white text-[15px] font-medium transition-colors border border-white/20 bg-black/10 hover:bg-black/20 px-3 py-1.5 rounded-full mr-1"
+                        title="About Us"
+                    >
+                        <i className="fas fa-hand-holding-heart mr-1.5" />
+                        <span className="text-xs">About Us</span>
+                    </button>
                     <button onClick={() => setLang(lang === 'en' ? 'ta' : 'en')} className="lang-toggle">
                         <i className="fas fa-language text-xs"></i>
                         {lang === 'en' ? 'தமிழ்' : 'EN'}

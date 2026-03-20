@@ -7,6 +7,7 @@ import Login from './components/Login';
 import CitizenDashboard from './components/CitizenDashboard';
 import EmployeeDashboard from './components/EmployeeDashboard';
 import AdminDashboard from './components/AdminDashboard';
+import AboutUs from './components/AboutUs';
 
 const App: React.FC = () => {
   const [user, setUser] = useState<User | null>(null);
@@ -93,6 +94,8 @@ const App: React.FC = () => {
                 : <Navigate to={user.role === Role.CITIZEN ? '/citizen' : user.role === Role.EMPLOYEE ? '/employee' : '/admin'} />
             }
           />
+
+          <Route path="/about" element={<AboutUs />} />
 
           <Route path="/citizen"
             element={

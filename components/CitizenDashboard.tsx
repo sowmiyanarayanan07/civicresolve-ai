@@ -97,22 +97,41 @@ const CitizenDashboard: React.FC<Props> = ({ user, lang, setLang, complaints, ad
     };
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-slate-50 to-indigo-50 pb-24">
-            {/* Header */}
+        <div className="citizen-bg pb-24">
+            {/* ── Header ── */}
             <header className="dash-header dash-header-citizen">
                 <div>
-                    <h1 style={{ fontFamily: 'Space Grotesk' }}>{t.app_name}</h1>
-                    <p className="text-xs text-indigo-200 mt-0.5">
-                        <i className="fas fa-user-circle mr-1"></i> {user.name}
-                    </p>
+                    <h1 style={{ fontFamily: 'Space Grotesk', letterSpacing: '-0.02em' }}>
+                        <i className="fas fa-leaf mr-2 opacity-90" />
+                        {t.app_name}
+                    </h1>
+                    <div className="citizen-greeting mt-1" style={{ display: 'inline-flex' }}>
+                        <i className="fas fa-user-circle" />
+                        <span>{user.name}</span>
+                    </div>
                 </div>
                 <div className="flex items-center gap-2">
-                    <button onClick={() => setLang(lang === 'en' ? 'ta' : 'en')} className="lang-toggle">
-                        <i className="fas fa-language text-xs"></i>
+                    <button
+                        onClick={() => window.location.hash = '#/about'}
+                        className="text-white/90 hover:text-white text-[15px] font-medium transition-colors border border-white/20 bg-black/10 hover:bg-black/20 px-3 py-1.5 rounded-full mr-1"
+                        title="About Us"
+                    >
+                        <i className="fas fa-hand-holding-heart mr-1.5" />
+                        <span className="text-xs">About Us</span>
+                    </button>
+                    <button
+                        onClick={() => setLang(lang === 'en' ? 'ta' : 'en')}
+                        className="lang-toggle"
+                    >
+                        <i className="fas fa-language text-xs" />
                         {lang === 'en' ? 'தமிழ்' : 'EN'}
                     </button>
-                    <button onClick={onLogout} className="text-white/80 hover:text-white text-sm font-medium transition-colors">
-                        <i className="fas fa-right-from-bracket"></i>
+                    <button
+                        onClick={onLogout}
+                        className="text-white/80 hover:text-white text-sm font-medium transition-colors"
+                        title="Logout"
+                    >
+                        <i className="fas fa-right-from-bracket" />
                     </button>
                 </div>
             </header>
@@ -120,18 +139,20 @@ const CitizenDashboard: React.FC<Props> = ({ user, lang, setLang, complaints, ad
             <main className="p-4 max-w-lg mx-auto space-y-4">
                 {view === 'report' ? (
                     <div className="fade-in-up space-y-4">
-                        <h2 className="text-lg font-bold text-slate-700" style={{ fontFamily: 'Space Grotesk' }}>
-                            <i className="fas fa-circle-plus text-indigo-500 mr-2"></i>{t.report_complaint}
-                        </h2>
+                        {/* Section title */}
+                        <div className="citizen-section-title">
+                            <span className="title-icon"><i className="fas fa-circle-plus" /></span>
+                            {t.report_complaint}
+                        </div>
 
                         {/* ─── STEP 1: Title ─── */}
-                        <div className="form-section space-y-4">
-                            <div className="flex items-center gap-2 mb-1">
-                                <span className="w-6 h-6 rounded-full bg-indigo-600 text-white text-xs flex items-center justify-center font-bold">1</span>
+                        <div className="citizen-form-section space-y-3">
+                            <div className="flex items-center gap-3 mb-2">
+                                <span className="citizen-step">1</span>
                                 <span className="font-semibold text-slate-700 text-sm">{t.complaint_title}</span>
                             </div>
                             <input
-                                className="civic-input"
+                                className="citizen-input"
                                 placeholder={t.complaint_title_placeholder}
                                 value={title}
                                 onChange={e => setTitle(e.target.value)}
@@ -139,13 +160,13 @@ const CitizenDashboard: React.FC<Props> = ({ user, lang, setLang, complaints, ad
                         </div>
 
                         {/* ─── STEP 2: Description ─── */}
-                        <div className="form-section space-y-2">
-                            <div className="flex items-center gap-2 mb-1">
-                                <span className="w-6 h-6 rounded-full bg-indigo-600 text-white text-xs flex items-center justify-center font-bold">2</span>
+                        <div className="citizen-form-section space-y-3">
+                            <div className="flex items-center gap-3 mb-2">
+                                <span className="citizen-step">2</span>
                                 <span className="font-semibold text-slate-700 text-sm">{t.description}</span>
                             </div>
                             <textarea
-                                className="civic-input min-h-[90px] resize-y"
+                                className="citizen-input min-h-[90px] resize-y"
                                 placeholder={t.description_placeholder}
                                 value={desc}
                                 onChange={e => setDesc(e.target.value)}
@@ -153,40 +174,41 @@ const CitizenDashboard: React.FC<Props> = ({ user, lang, setLang, complaints, ad
                         </div>
 
                         {/* ─── STEP 3: Photo ─── */}
-                        <div className="form-section space-y-2">
-                            <div className="flex items-center gap-2 mb-1">
-                                <span className="w-6 h-6 rounded-full bg-indigo-600 text-white text-xs flex items-center justify-center font-bold">3</span>
+                        <div className="citizen-form-section space-y-3">
+                            <div className="flex items-center gap-3 mb-2">
+                                <span className="citizen-step">3</span>
                                 <span className="font-semibold text-slate-700 text-sm">{t.upload_image}</span>
-                                <span className="text-xs text-slate-400">{t.optional}</span>
+                                <span className="text-xs text-slate-400 ml-1 px-2 py-0.5 bg-slate-100 rounded-full">{t.optional}</span>
                             </div>
                             <div className="flex items-center gap-3">
-                                <label className="flex-1 flex items-center justify-center gap-2 bg-slate-100 hover:bg-indigo-50 border-2 border-dashed border-slate-200 hover:border-indigo-300 p-3 rounded-xl cursor-pointer transition-all text-sm text-slate-600 font-medium">
-                                    <i className="fas fa-camera text-indigo-400"></i> {image ? t.change_photo : t.upload_photo}
+                                <label className="citizen-upload-zone flex-1">
+                                    <i className="fas fa-camera" />
+                                    {image ? t.change_photo : t.upload_photo}
                                     <input type="file" accept="image/*" className="hidden" onChange={handleImageUpload} />
                                 </label>
                                 {image && (
                                     <div className="relative">
-                                        <img src={image} alt="Preview" className="h-16 w-16 rounded-xl object-cover shadow-md" />
+                                        <img src={image} alt="Preview" className="h-16 w-16 rounded-xl object-cover shadow-md border-2 border-green-200" />
                                         <button
                                             onClick={() => setImage(null)}
-                                            className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs"
+                                            className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs shadow"
                                         >×</button>
                                     </div>
                                 )}
                             </div>
                         </div>
 
-                        {/* ─── STEP 4: Location (Map) — LAST ─── */}
-                        <div className="form-section p-0 overflow-hidden">
-                            <div className="px-4 pt-3 pb-1 flex items-center gap-2">
-                                <span className="w-6 h-6 rounded-full bg-indigo-600 text-white text-xs flex items-center justify-center font-bold">4</span>
+                        {/* ─── STEP 4: Location (Map) ─── */}
+                        <div className="citizen-form-section p-0 overflow-hidden">
+                            <div className="px-4 pt-4 pb-2 flex items-center gap-3">
+                                <span className="citizen-step">4</span>
                                 <span className="font-semibold text-slate-700 text-sm">{t.issue_location}</span>
                             </div>
 
-                            {/* GPS Badge + coords */}
+                            {/* GPS Badge + re-detect */}
                             <div className="px-4 py-2 flex items-center justify-between">
-                                <div className={`gps-badge ${gpsCapturing ? 'capturing' : ''}`}>
-                                    <span className={`gps-dot ${gpsCapturing ? 'capturing' : ''}`}></span>
+                                <div className={`gps-badge-green ${gpsCapturing ? 'capturing' : ''}`}>
+                                    <span className={`gps-dot ${gpsCapturing ? 'capturing' : ''}`} style={{ background: gpsCapturing ? '#2563eb' : '#16a34a' }} />
                                     {gpsCapturing
                                         ? t.gps_capturing
                                         : gpsCaptured
@@ -196,9 +218,10 @@ const CitizenDashboard: React.FC<Props> = ({ user, lang, setLang, complaints, ad
                                 <button
                                     onClick={captureLocation}
                                     disabled={gpsCapturing}
-                                    className="text-xs text-indigo-600 font-bold flex items-center gap-1 hover:text-indigo-800 transition-colors disabled:opacity-60"
+                                    className="text-xs font-bold flex items-center gap-1 transition-colors disabled:opacity-60"
+                                    style={{ color: '#16a34a' }}
                                 >
-                                    <i className={`fas ${gpsCapturing ? 'fa-spinner fa-spin' : 'fa-crosshairs'}`}></i>
+                                    <i className={`fas ${gpsCapturing ? 'fa-spinner fa-spin' : 'fa-crosshairs'}`} />
                                     {gpsCapturing ? t.locating : t.re_detect_gps}
                                 </button>
                             </div>
@@ -212,7 +235,7 @@ const CitizenDashboard: React.FC<Props> = ({ user, lang, setLang, complaints, ad
                                         step="0.00001"
                                         value={location.lat}
                                         onChange={e => setLocation(l => ({ ...l, lat: parseFloat(e.target.value) || l.lat }))}
-                                        className="w-full border border-slate-200 rounded-lg px-2 py-1.5 text-xs font-mono focus:outline-none focus:border-indigo-400"
+                                        className="w-full border border-slate-200 rounded-lg px-2 py-1.5 text-xs font-mono focus:outline-none focus:border-green-400"
                                     />
                                 </div>
                                 <div className="flex-1">
@@ -222,19 +245,19 @@ const CitizenDashboard: React.FC<Props> = ({ user, lang, setLang, complaints, ad
                                         step="0.00001"
                                         value={location.lng}
                                         onChange={e => setLocation(l => ({ ...l, lng: parseFloat(e.target.value) || l.lng }))}
-                                        className="w-full border border-slate-200 rounded-lg px-2 py-1.5 text-xs font-mono focus:outline-none focus:border-indigo-400"
+                                        className="w-full border border-slate-200 rounded-lg px-2 py-1.5 text-xs font-mono focus:outline-none focus:border-green-400"
                                     />
                                 </div>
                             </div>
 
                             {/* Hint */}
                             <p className="px-4 pb-2 text-[11px] text-slate-400">
-                                <i className="fas fa-hand-pointer mr-1 text-indigo-400"></i>
+                                <i className="fas fa-hand-pointer mr-1" style={{ color: '#16a34a' }} />
                                 {t.drag_pin_hint}
                             </p>
 
-                            {/* Map — draggable pin + click-to-move */}
-                            <div className="h-52 relative">
+                            {/* Map */}
+                            <div className="h-52 relative citizen-map-border mx-3 mb-3">
                                 <MapComponent
                                     center={location}
                                     zoom={15}
@@ -247,69 +270,76 @@ const CitizenDashboard: React.FC<Props> = ({ user, lang, setLang, complaints, ad
                         {/* Submit Error */}
                         {submitError && (
                             <div className="p-3 bg-red-50 border border-red-200 text-red-700 rounded-xl text-sm flex items-start gap-2">
-                                <i className="fas fa-triangle-exclamation mt-0.5 flex-shrink-0"></i>
+                                <i className="fas fa-triangle-exclamation mt-0.5 flex-shrink-0" />
                                 <span>{submitError}</span>
                             </div>
                         )}
 
-                        {/* Submit */}
+                        {/* Submit button */}
                         <button
                             onClick={handleSubmit}
                             disabled={isAnalyzing || !title.trim() || !desc.trim()}
-                            className="btn-primary"
+                            className="btn-citizen"
                         >
                             {isAnalyzing
-                                ? <span className="flex items-center justify-center gap-2"><span className="spinner"></span>{t.analyzing}</span>
-                                : <span><i className="fas fa-paper-plane mr-2"></i>{t.submit}</span>
+                                ? <span className="flex items-center justify-center gap-2"><span className="spinner" />{t.analyzing}</span>
+                                : <span><i className="fas fa-paper-plane mr-2" />{t.submit}</span>
                             }
                         </button>
                     </div>
                 ) : (
                     <div className="fade-in-up space-y-3">
-                        <h2 className="text-lg font-bold text-slate-700" style={{ fontFamily: 'Space Grotesk' }}>
-                            <i className="fas fa-list-check text-indigo-500 mr-2"></i>{t.my_complaints}
-                        </h2>
+                        {/* Section title */}
+                        <div className="citizen-section-title">
+                            <span className="title-icon"><i className="fas fa-list-check" /></span>
+                            {t.my_complaints}
+                        </div>
 
                         {complaints.length === 0 && (
-                            <div className="text-center py-16 text-slate-400">
-                                <i className="fas fa-inbox text-5xl mb-4 block text-slate-200"></i>
-                                <p className="font-medium">{t.no_complaints}</p>
-                                <p className="text-sm">{t.submit_first}</p>
+                            <div className="citizen-empty">
+                                <div className="citizen-empty-icon">
+                                    <i className="fas fa-inbox" />
+                                </div>
+                                <p className="font-semibold text-slate-600 mb-1">{t.no_complaints}</p>
+                                <p className="text-sm text-slate-400">{t.submit_first}</p>
                             </div>
                         )}
 
                         {complaints.map((c: Complaint) => (
-                            <div key={c.id} className="complaint-card slide-in-right">
-                                <div className="flex justify-between items-start mb-2">
-                                    <h3 className="font-bold text-slate-800">{c.title}</h3>
+                            <div key={c.id} className="citizen-card slide-in-right">
+                                <div className="flex justify-between items-start mb-2 pl-3">
+                                    <h3 className="font-bold text-slate-800 text-sm">{c.title}</h3>
                                     <span className={priorityBadgeClass(c.priority)}>{c.priority}</span>
                                 </div>
-                                <p className="text-sm text-slate-500 mb-3">{c.description}</p>
+                                <p className="text-sm text-slate-500 mb-3 pl-3">{c.description}</p>
 
-                                <div className="flex items-center justify-between text-xs">
+                                <div className="pl-3 flex items-center justify-between text-xs">
                                     <span className="flex items-center gap-1 text-slate-400">
-                                        <i className="fas fa-tag"></i> {c.category}
+                                        <i className="fas fa-tag" style={{ color: '#16a34a' }} /> {c.category}
                                     </span>
                                     <span className={`font-semibold ${STATUS_COLORS[c.status] || 'text-slate-600'}`}>
-                                        Status: {c.status}
+                                        <i className="fas fa-circle-half-stroke mr-1" />
+                                        {c.status}
                                     </span>
                                 </div>
 
                                 {c.adminComment && (
-                                    <div className="mt-2 p-2 bg-red-50 border border-red-100 text-red-700 text-xs rounded-lg">
+                                    <div className="mt-3 ml-3 p-2 bg-red-50 border border-red-100 text-red-700 text-xs rounded-lg">
                                         <strong>{t.admin_note}</strong> {c.adminComment}
                                     </div>
                                 )}
                                 {c.aiAnalysis && (
-                                    <div className="mt-2 p-2 bg-indigo-50 border border-indigo-100 text-indigo-700 text-xs rounded-lg">
-                                        <i className="fas fa-robot mr-1"></i>
-                                        {c.aiAnalysis.department} • Est: {c.aiAnalysis.estimatedTime}
+                                    <div className="mt-2 ml-3 citizen-ai-pill">
+                                        <i className="fas fa-robot" />
+                                        <span>{c.aiAnalysis.department}</span>
+                                        <span className="text-slate-400">•</span>
+                                        <span>Est: {c.aiAnalysis.estimatedTime}</span>
                                     </div>
                                 )}
 
-                                {/* Issue tracking mini-map — always show if location exists */}
+                                {/* Issue tracking mini-map */}
                                 {c.location && (
-                                    <div className="h-32 mt-3 rounded-xl overflow-hidden relative border border-indigo-100">
+                                    <div className="h-32 mt-3 ml-3 citizen-map-border relative">
                                         <MapComponent
                                             center={c.location}
                                             markers={[
@@ -319,8 +349,8 @@ const CitizenDashboard: React.FC<Props> = ({ user, lang, setLang, complaints, ad
                                             zoom={14}
                                         />
                                         {c.employeeLocation && (
-                                            <div className="absolute bottom-2 right-2 bg-white px-2 py-1 text-xs rounded-lg shadow font-bold text-indigo-700">
-                                                <i className="fas fa-clock mr-1"></i>{t.eta_5min}
+                                            <div className="absolute bottom-2 right-2 bg-white px-2 py-1 text-xs rounded-lg shadow font-bold" style={{ color: '#15803d' }}>
+                                                <i className="fas fa-clock mr-1" />{t.eta_5min}
                                             </div>
                                         )}
                                     </div>
@@ -331,14 +361,14 @@ const CitizenDashboard: React.FC<Props> = ({ user, lang, setLang, complaints, ad
                 )}
             </main>
 
-            {/* Bottom Nav */}
-            <div className="bottom-nav">
+            {/* Bottom Nav — green active */}
+            <div className="bottom-nav citizen-bottom-nav">
                 <button onClick={() => setView('report')} className={view === 'report' ? 'active' : ''}>
-                    <i className="fas fa-circle-plus text-xl"></i>
+                    <i className="fas fa-circle-plus text-xl" />
                     <span>{t.report_complaint}</span>
                 </button>
                 <button onClick={() => setView('list')} className={view === 'list' ? 'active' : ''}>
-                    <i className="fas fa-list-check text-xl"></i>
+                    <i className="fas fa-list-check text-xl" />
                     <span>{t.my_complaints}</span>
                 </button>
             </div>

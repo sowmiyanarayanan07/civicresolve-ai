@@ -167,6 +167,12 @@ const AdminDashboard: React.FC<Props> = ({ lang, setLang, complaints, assignEmpl
                     >
                         <i className="fas fa-trash-can mr-1"></i> Clear All Complaints
                     </button>
+                    <button
+                        onClick={() => window.location.hash = '#/about'}
+                        className="w-full bg-indigo-900/20 hover:bg-indigo-900/40 text-indigo-300 border border-indigo-800/30 px-3 py-2 rounded-xl text-sm font-semibold transition-all mb-2"
+                    >
+                        <i className="fas fa-hand-holding-heart mr-2"></i> About Us
+                    </button>
                     <div className="flex gap-2">
                         <button onClick={() => setLang(lang === 'en' ? 'ta' : 'en')} className="lang-toggle flex-1 text-center">
                             <i className="fas fa-language text-xs"></i>

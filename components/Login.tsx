@@ -4,6 +4,7 @@ import { Role, User, Language } from '../types';
 import { loginWithOtp } from '../services/authService';
 import { sendOtp, verifyOtpAsync } from '../services/otpService';
 import { TRANSLATIONS } from '../constants';
+import civicBg from '../src/assets/civic-bg.png';
 
 type Panel = 'citizen' | 'employee' | 'admin';
 type Step = 'email' | 'otp';
@@ -37,7 +38,7 @@ function OtpBoxes({
                     onChange={e => onChange(i, e.target.value)}
                     onKeyDown={e => onKeyDown(i, e)}
                     onPaste={onPaste}
-                    className="w-12 h-14 text-center text-xl font-bold rounded-xl border-2 border-slate-200 focus:border-indigo-500 focus:outline-none transition-all bg-white shadow-sm"
+                    className="w-12 h-14 text-center text-xl font-bold rounded-xl border-2 border-slate-200 focus:border-green-500 focus:outline-none transition-all bg-white shadow-sm"
                     style={d ? { borderColor: 'var(--role-color)' } : {}}
                 />
             ))}
@@ -178,7 +179,7 @@ function RoleLoginPanel({
     }
 
     const cfg = {
-        citizen: { color: '#4f46e5', icon: 'fa-user', label: 'Citizen', accent: 'indigo' },
+        citizen: { color: '#16a34a', icon: 'fa-leaf', label: 'Citizen', accent: 'green' },
         employee: { color: '#059669', icon: 'fa-hard-hat', label: 'Field Employee', accent: 'emerald' },
         admin: { color: '#dc2626', icon: 'fa-shield-halved', label: 'Administrator', accent: 'red' },
     }[panel];
@@ -272,7 +273,7 @@ function RoleLoginPanel({
                         </button>
                         <button type="button" onClick={handleResend}
                             disabled={resend > 0 || loading}
-                            className={`font-medium transition-colors ${resend > 0 ? 'text-slate-400 cursor-not-allowed' : 'text-indigo-600 hover:text-indigo-800'}`}>
+                            className={`font-medium transition-colors ${resend > 0 ? 'text-slate-400 cursor-not-allowed' : 'text-green-600 hover:text-green-800'}`}>
                             {resend > 0 ? `${t.resend_in} ${resend}s` : t.resend_otp}
                         </button>
                     </div>
@@ -287,7 +288,7 @@ const Login: React.FC<LoginProps> = ({ onLogin, lang, setLang }) => {
     const [panel, setPanel] = useState<Panel>('citizen');
 
     const tabs: { id: Panel; icon: string; label: string; color: string; bg: string }[] = [
-        { id: 'citizen', icon: 'fa-user', label: 'Citizen', color: '#4f46e5', bg: 'indigo' },
+        { id: 'citizen', icon: 'fa-leaf', label: 'Citizen', color: '#16a34a', bg: 'green' },
         { id: 'employee', icon: 'fa-hard-hat', label: 'Employee', color: '#059669', bg: 'emerald' },
         { id: 'admin', icon: 'fa-shield-halved', label: 'Admin', color: '#dc2626', bg: 'red' },
     ];
@@ -298,69 +299,99 @@ const Login: React.FC<LoginProps> = ({ onLogin, lang, setLang }) => {
         <div className="min-h-screen flex flex-col md:flex-row">
 
             {/* ── LEFT HERO ── */}
-            <div className="hero-gradient hidden md:flex md:w-5/12 flex-col items-center justify-center p-12 text-white relative overflow-hidden">
-                <div className="absolute inset-0 opacity-10"
-                    style={{ backgroundImage: 'radial-gradient(circle at 30% 50%, #6366f1 0%, transparent 60%), radial-gradient(circle at 80% 20%, #8b5cf6 0%, transparent 50%)' }} />
-                <div className="relative z-10 text-center w-full max-w-sm">
-                    <div className="mb-6 inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-white/10 backdrop-blur border border-white/20">
-                        <i className="fas fa-city text-4xl text-white"></i>
+            <div className="hero-gradient hidden md:flex md:w-5/12 flex-col items-center justify-center p-12 text-white relative overflow-hidden shadow-2xl z-10">
+                {/* Enhanced Green Glows */}
+                <div className="absolute inset-0 opacity-20 mix-blend-screen"
+                    style={{ backgroundImage: 'radial-gradient(circle at 20% 40%, #4ade80 0%, transparent 50%), radial-gradient(circle at 80% 80%, #10b981 0%, transparent 50%)' }} />
+                
+                {/* Floating decorative elements */}
+                <div className="absolute top-10 right-10 w-24 h-24 rounded-full border border-white/10 opacity-30 animate-pulse" />
+                <div className="absolute bottom-20 left-10 w-40 h-40 rounded-full border border-green-400/10 opacity-20" />
+
+                <div className="relative z-10 w-full max-w-sm flex flex-col items-center">
+                    {/* Premium App Icon */}
+                    <div className="mb-8 relative group">
+                        <div className="absolute inset-0 bg-green-400 blur-xl opacity-30 group-hover:opacity-50 transition-opacity duration-500 rounded-3xl" />
+                        <div className="relative flex items-center justify-center w-24 h-24 rounded-3xl bg-white/10 backdrop-blur-md border border-white/20 shadow-xl overflow-hidden">
+                            <div className="absolute inset-0 bg-gradient-to-br from-white/20 to-transparent" />
+                            <i className="fas fa-leaf text-5xl text-white drop-shadow-md"></i>
+                        </div>
                     </div>
-                    <h1 className="text-4xl font-bold mb-2" style={{ fontFamily: 'Space Grotesk' }}>CivicResolve AI</h1>
-                    <p className="text-white/65 text-base mb-10 leading-relaxed">
+
+                    <h1 className="text-4xl font-extrabold mb-3 tracking-tight text-center" style={{ fontFamily: 'Space Grotesk', textShadow: '0 2px 10px rgba(0,0,0,0.2)' }}>
+                        CivicResolve <span className="text-green-300">AI</span>
+                    </h1>
+                    <p className="text-green-50 text-base mb-10 leading-relaxed text-center font-medium opacity-90">
                         Intelligent Civic Grievance Management<br />with Real-Time Tracking & AI
                     </p>
 
-                    {/* Role illustration cards */}
-                    <div className="space-y-3 text-left">
+                    {/* Role illustration cards - Premium Redesign */}
+                    <div className="space-y-4 w-full">
                         {[
-                            { icon: 'fa-user', color: '#818cf8', title: 'Citizens', desc: 'Report issues, track status live' },
-                            { icon: 'fa-hard-hat', color: '#34d399', title: 'Employees', desc: 'View tasks, navigate & mark complete' },
-                            { icon: 'fa-shield-halved', color: '#f87171', title: 'Admins', desc: 'Full dashboard — assign, verify, resolve' },
+                            { icon: 'fa-leaf', title: 'Citizens', desc: 'Report issues, track status live', bg: 'bg-green-500/20', border: 'border-green-400/30', iconColor: 'text-green-300' },
+                            { icon: 'fa-hard-hat', title: 'Employees', desc: 'View tasks, navigate & mark complete', bg: 'bg-emerald-500/20', border: 'border-emerald-400/30', iconColor: 'text-emerald-300' },
+                            { icon: 'fa-shield-halved', title: 'Admins', desc: 'Full dashboard — assign, verify, resolve', bg: 'bg-teal-500/20', border: 'border-teal-400/30', iconColor: 'text-teal-300' },
                         ].map(r => (
-                            <div key={r.icon} className="flex items-center gap-3 glass-card px-4 py-3 rounded-xl">
-                                <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
-                                    style={{ background: r.color + '30', border: `1px solid ${r.color}50` }}>
-                                    <i className={`fas ${r.icon} text-sm`} style={{ color: r.color }}></i>
+                            <div key={r.icon} className={`flex items-center gap-4 p-4 rounded-2xl backdrop-blur-sm border transition-all hover:-translate-y-1 hover:bg-white/10 ${r.bg} ${r.border} shadow-lg`}>
+                                <div className="w-12 h-12 rounded-xl flex items-center justify-center bg-white/10 border border-white/10 shadow-inner flex-shrink-0">
+                                    <i className={`fas ${r.icon} text-lg ${r.iconColor}`}></i>
                                 </div>
-                                <div>
-                                    <p className="text-sm font-semibold text-white/90">{r.title}</p>
-                                    <p className="text-xs text-white/55">{r.desc}</p>
+                                <div className="text-left">
+                                    <p className="text-[15px] font-bold text-white mb-0.5 tracking-wide">{r.title}</p>
+                                    <p className="text-xs text-green-100/70 font-medium">{r.desc}</p>
                                 </div>
                             </div>
                         ))}
                     </div>
 
-                    {/* OTP badge */}
-                    <div className="mt-8 inline-flex items-center gap-2 bg-white/10 border border-white/20 px-4 py-2 rounded-full text-xs font-medium text-white/80">
-                        <i className="fas fa-envelope-circle-check text-green-300"></i>
-                        Secured by Email OTP — no passwords
+                    {/* Security Badge */}
+                    <div className="mt-10 inline-flex items-center gap-2 bg-black/20 backdrop-blur-md border border-white/10 px-5 py-2.5 rounded-full text-[13px] font-semibold text-green-50 shadow-inner">
+                        <i className="fas fa-shield-check text-green-400 text-lg"></i>
+                        Secured by Email OTP — No Passwords
                     </div>
                 </div>
             </div>
 
-            {/* ── RIGHT FORM ── */}
-            <div className="flex-1 flex flex-col items-center justify-center p-5 bg-gradient-to-br from-slate-50 to-indigo-50 min-h-screen">
-                <div className="auth-panel w-full max-w-md p-8 fade-in-up">
+            {/* ── RIGHT FORM (Enhanced with Civic Image Background) ── */}
+            <div className="flex-1 flex flex-col items-center justify-center p-5 min-h-screen relative overflow-hidden">
+                {/* Generated Background Image */}
+                <div 
+                    className="absolute inset-0 z-0 bg-cover bg-center bg-no-repeat"
+                    style={{ 
+                        backgroundImage: `url(${civicBg})`,
+                        filter: 'brightness(1.05) contrast(1.05)'
+                    }} 
+                />
+                
+                {/* Subtle Overlay to ensure form readability */}
+                <div className="absolute inset-0 z-0 bg-green-900/10 backdrop-blur-[2px]" />
+
+                {/* Animated Gradient Orbs (Subtle over image) */}
+                <div className="absolute top-[-10%] right-[-5%] w-96 h-96 bg-green-400 rounded-full mix-blend-overlay filter blur-3xl opacity-40 animate-[pulse_8s_ease-in-out_infinite]" />
+                <div className="absolute bottom-[-10%] left-[-10%] w-[500px] h-[500px] bg-emerald-300 rounded-full mix-blend-overlay filter blur-3xl opacity-50 animate-[pulse_10s_ease-in-out_infinite_reverse]" />
+
+                {/* Main Auth Panel with Glassmorphism */}
+                <div className="auth-panel w-full max-w-md p-8 fade-in-up relative z-10 backdrop-blur-2xl bg-white/85 shadow-2xl border border-white/60">
 
                     {/* Mobile logo */}
                     <div className="flex md:hidden items-center gap-3 mb-6">
-                        <div className="w-10 h-10 rounded-xl bg-indigo-600 flex items-center justify-center">
-                            <i className="fas fa-city text-white"></i>
+                        <div className="w-10 h-10 rounded-xl flex items-center justify-center shadow-lg bg-gradient-to-br from-green-600 to-emerald-500 border border-green-400/50">
+                            <i className="fas fa-leaf text-white text-lg"></i>
                         </div>
-                        <span className="font-bold text-lg text-indigo-700" style={{ fontFamily: 'Space Grotesk' }}>CivicResolve AI</span>
+                        <span className="font-extrabold text-xl tracking-tight text-green-800" style={{ fontFamily: 'Space Grotesk' }}>CivicResolve <span className="text-green-600">AI</span></span>
                     </div>
 
                     {/* Header */}
-                    <div className="flex items-center justify-between mb-6">
+                    <div className="flex items-start justify-between mb-8">
                         <div>
-                            <h2 className="text-2xl font-bold text-slate-800" style={{ fontFamily: 'Space Grotesk' }}>
+                            <h2 className="text-3xl font-extrabold text-slate-800 tracking-tight" style={{ fontFamily: 'Space Grotesk' }}>
                                 {TRANSLATIONS[lang].sign_in}
                             </h2>
-                            <p className="text-sm text-slate-500 mt-0.5">{TRANSLATIONS[lang].select_role_otp}</p>
+                            <p className="text-[14px] text-slate-500 mt-1.5 font-medium">{TRANSLATIONS[lang].select_role_otp}</p>
                         </div>
                         <button
                             onClick={() => setLang(lang === 'en' ? 'ta' : 'en')}
-                            className="text-xs font-bold px-3 py-2 rounded-full border border-indigo-200 text-indigo-600 hover:bg-indigo-50 transition-all"
+                            className="text-[11px] font-bold px-3 py-1.5 rounded-full border border-green-200 text-green-700 bg-white/60 hover:bg-green-50 hover:border-green-300 transition-all shadow-sm backdrop-blur-sm"
                         >
                             {lang === 'en' ? 'தமிழ்' : 'English'}
                         </button>
@@ -397,6 +428,20 @@ const Login: React.FC<LoginProps> = ({ onLogin, lang, setLang }) => {
                     <React.Fragment key={panel}>
                         <RoleLoginPanel panel={panel} onLogin={onLogin} lang={lang} />
                     </React.Fragment>
+
+                    {/* About the Team Link */}
+                    <div className="mt-8 text-center pt-6 border-t border-slate-200/50">
+                        <button 
+                            onClick={() => {
+                                // @ts-ignore - Login component doesn't have useNavigate imported globally, using window.location for hash router
+                                window.location.hash = '#/about';
+                            }}
+                            className="inline-flex items-center gap-2 text-[13px] font-semibold text-green-700 hover:text-green-800 bg-green-50/50 hover:bg-green-100/50 px-4 py-2 rounded-full transition-all"
+                        >
+                            <i className="fas fa-hand-holding-heart text-green-600"></i>
+                            About Us
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
