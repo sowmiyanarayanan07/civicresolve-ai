@@ -35,18 +35,8 @@ async function supabaseStoreOtp(email: string, otp: string): Promise<void> {
         throw new Error('Supabase configuration is missing. Please check VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY in your .env.local file.');
     }
 
-    // Validate that the key is a proper JWT (must start with "eyJ")
-    // Supabase publishable keys (sb_publishable_...) are NOT valid for REST API calls
-    if (!key.startsWith('eyJ')) {
-        const errMsg =
-            'Invalid Supabase anon key format.\n\n' +
-            'Your VITE_SUPABASE_ANON_KEY appears to be a "publishable key" (starts with sb_publishable_...) ' +
-            'which is NOT supported by the Supabase REST API.\n\n' +
-            'Fix: Go to your Supabase project → Settings → API → copy the "anon / public" JWT key ' +
-            '(it starts with "eyJ...") and update VITE_SUPABASE_ANON_KEY in your .env.local file.';
-        console.error(errMsg);
-        throw new Error(errMsg);
-    }
+    // The key is passed directly to fetch - removed strict 'eyJ' check 
+    // to allow alternative key formats like sb_publishable_ if the backend accepts them.
 
     const expiresAt = new Date(Date.now() + OTP_TTL_MINUTES * 60 * 1000).toISOString();
     try {
