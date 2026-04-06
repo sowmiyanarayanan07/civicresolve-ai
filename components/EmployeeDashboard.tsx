@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Complaint, ComplaintStatus, Language, Location, Priority } from '../types';
 import { TRANSLATIONS } from '../constants';
 import MapComponent from './MapComponent';
+import { verifyResolution } from '../services/geminiService';
 
 interface Props {
     user: { id: string; name: string };
@@ -10,15 +11,18 @@ interface Props {
     complaints: Complaint[];
     updateStatus: (id: string, status: ComplaintStatus) => void;
     updateLocation: (id: string, loc: Location) => void;
-    completeTask: (id: string, proofImage: string) => void;
+    completeTask: (id: string, proofImage: string, aiVerification?: { isResolved: boolean; reason: string }) => void;
+    updateUserAvatar: (avatarData: string) => void;
     onLogout: () => void;
 }
 
-const EmployeeDashboard: React.FC<Props> = ({ user, lang, setLang, complaints, updateStatus, updateLocation, completeTask, onLogout }) => {
+const EmployeeDashboard: React.FC<Props> = ({ user, lang, setLang, complaints, updateStatus, updateLocation, completeTask, updateUserAvatar, onLogout }) => {
     const [activeTask, setActiveTask] = useState<string | null>(null);
     const [currentLocation, setCurrentLocation] = useState<Location>({ lat: 12.975, lng: 80.25 });
     const [proofImage, setProofImage] = useState<string | null>(null);
     const [isOnline, setIsOnline] = useState(navigator.onLine);
+    const [isVerifying, setIsVerifying] = useState(false);
+    const [verificationError, setVerificationError] = useState<string | null>(null);
     const [taskStatus, setTaskStatus] = useState<ComplaintStatus | null>(null);
     const t = TRANSLATIONS[lang];
 
@@ -74,12 +78,39 @@ const EmployeeDashboard: React.FC<Props> = ({ user, lang, setLang, complaints, u
         }
     };
 
-    const submitCompletion = () => {
+    const submitCompletion = async () => {
         if (activeTask && proofImage) {
-            completeTask(activeTask, proofImage);
+            const activeComplaint = complaints.find(c => c.id === activeTask);
+            if (!activeComplaint) return;
+
+            setIsVerifying(true);
+            setVerificationError(null);
+            
+            try {
+                const verification = await verifyResolution(proofImage, activeComplaint.description, activeComplaint.image);
+                if (verification) {
+                    if (!verification.isResolved) {
+                        setVerificationError(verification.reason || "The AI detected that the issue is not fully resolved. Please submit a clearer photo or complete the task.");
+                        setIsVerifying(false);
+                        return; // Block submission
+                    }
+                    completeTask(activeTask, proofImage, verification);
+                } else {
+                    // Precaution in case of API failure - proceed but without AI verification mark
+                    setVerificationError("AI verification service unavailable. Please try again or contact Admin.");
+                    setIsVerifying(false);
+                    return;
+                }
+            } catch (error) {
+                setVerificationError("Error communicating with AI verification service.");
+                setIsVerifying(false);
+                return;
+            }
+
             setActiveTask(null);
             setProofImage(null);
             setTaskStatus(null);
+            setIsVerifying(false);
         }
     };
 
@@ -91,10 +122,21 @@ const EmployeeDashboard: React.FC<Props> = ({ user, lang, setLang, complaints, u
     };
 
     const assignedComplaints = complaints.filter(c =>
-        c.status !== ComplaintStatus.VERIFIED
+        c.status !== ComplaintStatus.VERIFIED && !c.parentId
     );
 
     const activeComplaint = complaints.find(c => c.id === activeTask);
+
+    const handleAvatarUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (e.target.files?.[0]) {
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                const base64 = reader.result as string;
+                updateUserAvatar(base64);
+            };
+            reader.readAsDataURL(e.target.files[0]);
+        }
+    };
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-slate-50 to-emerald-50">
@@ -103,11 +145,26 @@ const EmployeeDashboard: React.FC<Props> = ({ user, lang, setLang, complaints, u
 
             {/* Header */}
             <header className="dash-header dash-header-employee">
-                <div>
-                    <h1 style={{ fontFamily: 'Space Grotesk' }}>
-                        <i className="fas fa-hard-hat mr-2 text-emerald-300"></i>{t.workforce_app}
-                    </h1>
-                    <p className="text-xs text-emerald-200 mt-0.5">{user.name}</p>
+                <div className="flex items-center gap-3">
+                    <label className="relative cursor-pointer group">
+                        <div className="w-10 h-10 shadow-sm rounded-full bg-emerald-100 border border-emerald-200 overflow-hidden flex items-center justify-center flex-shrink-0">
+                            {user.avatar ? (
+                                <img src={user.avatar} alt="Avatar" className="w-full h-full object-cover" />
+                            ) : (
+                                <i className="fas fa-user-hard-hat text-emerald-500 text-lg"></i>
+                            )}
+                        </div>
+                        <div className="absolute inset-0 bg-black/40 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                            <i className="fas fa-camera text-white text-xs"></i>
+                        </div>
+                        <input type="file" accept="image/*" className="hidden" onChange={handleAvatarUpload} />
+                    </label>
+                    <div>
+                        <h1 style={{ fontFamily: 'Space Grotesk' }}>
+                            <i className="fas fa-hard-hat mr-2 text-emerald-300"></i>{t.workforce_app}
+                        </h1>
+                        <p className="text-xs text-emerald-200 mt-0.5">{user.name}</p>
+                    </div>
                 </div>
                 <div className="flex items-center gap-2">
                     <button
@@ -149,10 +206,31 @@ const EmployeeDashboard: React.FC<Props> = ({ user, lang, setLang, complaints, u
                         <div className="flex justify-between items-center">
                             <div>
                                 <h3 className="font-bold text-slate-800" style={{ fontFamily: 'Space Grotesk' }}>{activeComplaint.title}</h3>
-                                <p className="text-xs text-slate-500 mt-0.5">{activeComplaint.category}</p>
+                                <div className="flex items-center gap-2 mt-0.5">
+                                    <p className="text-xs text-slate-500">{activeComplaint.category}</p>
+                                    {activeComplaint.aiAnalysis && (
+                                        <span className="text-[10px] bg-indigo-50 text-indigo-600 px-1.5 py-0.5 rounded font-bold border border-indigo-100">
+                                            Est: {activeComplaint.aiAnalysis.estimatedTime}
+                                        </span>
+                                    )}
+                                </div>
                             </div>
-                            <span className="badge badge-high">{activeComplaint.priority}</span>
+                            <span className={`badge ${activeComplaint.priority === 'Emergency' ? 'badge-emergency' : activeComplaint.priority === 'High' ? 'badge-high' : activeComplaint.priority === 'Medium' ? 'badge-medium' : 'badge-low'}`}>{activeComplaint.priority}</span>
                         </div>
+
+                        {/* Equipment Needed */}
+                        {activeComplaint.aiAnalysis?.equipmentNeeded && activeComplaint.aiAnalysis.equipmentNeeded.length > 0 && (
+                            <div className="bg-amber-50 border border-amber-200 rounded-xl p-3">
+                                <p className="text-xs font-bold text-amber-800 mb-2 uppercase tracking-wide"><i className="fas fa-toolbox mr-1"></i> Required Gear / Resources</p>
+                                <div className="flex flex-wrap gap-1.5">
+                                    {activeComplaint.aiAnalysis.equipmentNeeded.map((eq, i) => (
+                                        <span key={i} className="text-[11px] bg-white border border-amber-300 text-amber-900 px-2.5 py-1 rounded-md shadow-sm font-medium">
+                                            {eq}
+                                        </span>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
 
                         {/* Progress Bar */}
                         <div>
@@ -195,14 +273,26 @@ const EmployeeDashboard: React.FC<Props> = ({ user, lang, setLang, complaints, u
                             <div className="flex gap-2 mb-2">
                                 <label className="flex-1 flex items-center justify-center gap-2 bg-slate-100 hover:bg-slate-200 p-2.5 rounded-xl cursor-pointer text-sm text-slate-600 font-medium transition-all">
                                     <i className="fas fa-camera text-slate-400"></i> {t.upload_photo}
-                                    <input type="file" accept="image/*" className="hidden" onChange={handleProofUpload} />
+                                    <input type="file" accept="image/*" className="hidden" onChange={handleProofUpload} disabled={isVerifying} />
                                 </label>
                                 {proofImage && <img src={proofImage} alt="Proof" className="h-12 w-12 rounded-xl object-cover shadow" />}
                             </div>
+
+                            {verificationError && (
+                                <div className="bg-red-50 border border-red-200 text-red-700 text-xs p-2 rounded-lg mb-2">
+                                    <i className="fas fa-robot mr-1 text-red-600"></i>
+                                    <strong>AI Verification Failed:</strong> {verificationError}
+                                </div>
+                            )}
+
                             <button onClick={submitCompletion}
                                 className={`btn-primary ${proofImage ? 'btn-success' : 'opacity-50 cursor-not-allowed'}`}
-                                disabled={!proofImage}>
-                                <i className="fas fa-check-circle mr-2"></i> {t.submit_verification}
+                                disabled={!proofImage || isVerifying}>
+                                {isVerifying ? (
+                                    <><i className="fas fa-spinner fa-spin mr-2"></i> AI verifying...</>
+                                ) : (
+                                    <><i className="fas fa-check-circle mr-2"></i> {t.submit_verification}</>
+                                )}
                             </button>
                         </div>
 

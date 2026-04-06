@@ -40,15 +40,24 @@ export interface Complaint {
   priority: Priority;
   status: ComplaintStatus;
   createdAt: number;
+  resolvedAt?: number;       // Actual resolution/completion timestamp
   assignedTo?: string;       // Employee ID
   employeeLocation?: Location; // Real-time tracking
   completionImage?: string;  // Proof of work
   adminComment?: string;     // Reason for rejection
+  feedbackRating?: number;   // Citizen feedback rating (1-5 stars)
+  feedbackComments?: string; // Citizen feedback additional comments
   aiAnalysis?: {
     reason: string;
     department: string;
     estimatedTime: string;
+    equipmentNeeded?: string[];
   };
+  aiVerification?: {
+    isResolved: boolean;
+    reason: string;
+  };
+  parentId?: string; // ID of the master incident this duplicates
 }
 
 export interface User {
@@ -57,6 +66,7 @@ export interface User {
   email: string;             // Email (replaces mobile)
   role: Role;
   langPreference?: Language;
+  avatar?: string;           // Base64 image
 }
 
 export type Language = 'en' | 'ta'; // English | Tamil

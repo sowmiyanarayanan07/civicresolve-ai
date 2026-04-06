@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { Role, User, Language, Complaint, ComplaintStatus, Location } from './types';
-import { subscribeToComplaints, addComplaint as dbAddComplaint, updateComplaint, deleteAllComplaints as dbDeleteAllComplaints } from './services/dbService';
+import { subscribeToComplaints, addComplaint as dbAddComplaint, updateComplaint, deleteAllComplaints as dbDeleteAllComplaints, updateUserAvatar as dbUpdateUserAvatar } from './services/dbService';
 import { signOut, restoreSession } from './services/authService';
 import Login from './components/Login';
 import CitizenDashboard from './components/CitizenDashboard';
@@ -36,16 +36,20 @@ const App: React.FC = () => {
     await updateComplaint(complaintId, { assignedTo: empId, status: ComplaintStatus.ASSIGNED });
   };
 
+  const submitFeedback = async (complaintId: string, rating: number, comments?: string) => {
+    await updateComplaint(complaintId, { feedbackRating: rating, feedbackComments: comments });
+  };
+
   const updateStatus = async (complaintId: string, status: ComplaintStatus) => {
     await updateComplaint(complaintId, { status });
   };
 
-  const completeTask = async (complaintId: string, proofImage: string) => {
-    await updateComplaint(complaintId, { status: ComplaintStatus.JOB_COMPLETED, completionImage: proofImage });
+  const completeTask = async (complaintId: string, proofImage: string, aiVerification?: { isResolved: boolean; reason: string }) => {
+    await updateComplaint(complaintId, { status: ComplaintStatus.JOB_COMPLETED, completionImage: proofImage, aiVerification });
   };
 
   const adminVerify = async (complaintId: string) => {
-    await updateComplaint(complaintId, { status: ComplaintStatus.VERIFIED });
+    await updateComplaint(complaintId, { status: ComplaintStatus.VERIFIED, resolvedAt: Date.now() });
   };
 
   const adminReject = async (complaintId: string, reason: string) => {
@@ -58,6 +62,14 @@ const App: React.FC = () => {
 
   const updateEmployeeLocation = async (complaintId: string, loc: Location) => {
     await updateComplaint(complaintId, { employeeLocation: loc });
+  };
+
+  const handleUpdateAvatar = async (avatarData: string) => {
+    if (!user) return;
+    await dbUpdateUserAvatar(user.id, avatarData);
+    const updatedUser = { ...user, avatar: avatarData };
+    setUser(updatedUser);
+    localStorage.setItem('civic_current_user', JSON.stringify(updatedUser));
   };
 
   const handleLogout = async () => {
@@ -108,6 +120,8 @@ const App: React.FC = () => {
                     || c.citizenId === user.id
                   )}
                   addComplaint={addComplaint}
+                  submitFeedback={submitFeedback}
+                  updateUserAvatar={handleUpdateAvatar}
                   onLogout={handleLogout}
                 />
                 : <Navigate to="/" />
@@ -123,6 +137,7 @@ const App: React.FC = () => {
                   updateStatus={updateStatus}
                   updateLocation={updateEmployeeLocation}
                   completeTask={completeTask}
+                  updateUserAvatar={handleUpdateAvatar}
                   onLogout={handleLogout}
                 />
                 : <Navigate to="/" />

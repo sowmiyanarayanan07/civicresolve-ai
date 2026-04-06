@@ -125,8 +125,7 @@ const AboutUs: React.FC = () => {
 
                 {/* Footer simple mark */}
                 <div className="text-center pb-12 opacity-50 text-sm font-medium">
-                    <i className="fas fa-heart text-red-500 mr-1"></i>
-                    Built by Sowmiya, Vignesh & Sai
+                    Sowmiya Narayanan, Vigneshwaran and Sai Arunnesh
                 </div>
             </main>
         </div>

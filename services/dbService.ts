@@ -35,9 +35,14 @@ function rowToComplaint(row: Record<string, unknown>): Complaint {
         status: row.status as Complaint['status'],
         assignedTo: row.assigned_to as string | undefined,
         aiAnalysis: row.ai_analysis as Complaint['aiAnalysis'],
+        aiVerification: row.ai_verification as Complaint['aiVerification'],
         adminComment: row.admin_comment as string | undefined,
         completionImage: row.completion_image as string | undefined,
+        feedbackRating: row.feedback_rating as number | undefined,
+        feedbackComments: row.feedback_comments as string | undefined,
         createdAt: new Date(row.created_at as string).getTime(),
+        resolvedAt: row.resolved_at ? new Date(row.resolved_at as string).getTime() : undefined,
+        parentId: row.parent_id as string | undefined,
     };
 }
 
@@ -56,10 +61,79 @@ function complaintToRow(c: Complaint): Record<string, unknown> {
         status: c.status,
         assigned_to: c.assignedTo ?? null,
         ai_analysis: c.aiAnalysis ?? null,
+        ai_verification: c.aiVerification ?? null,
         admin_comment: c.adminComment ?? null,
         completion_image: c.completionImage ?? null,
+        feedback_rating: c.feedbackRating ?? null,
+        feedback_comments: c.feedbackComments ?? null,
+        resolved_at: c.resolvedAt ? new Date(c.resolvedAt).toISOString() : null,
+        parent_id: c.parentId ?? null,
     };
 }
+
+// ─── AVAILABILITY HELPER ─────────────────────────────────────────────────────
+// Active statuses: anything that is not completed, verified, or rejected
+const ACTIVE_STATUSES: ComplaintStatus[] = [
+    ComplaintStatus.SUBMITTED,
+    ComplaintStatus.ASSIGNED,
+    ComplaintStatus.ON_THE_WAY,
+    ComplaintStatus.REACHED,
+    ComplaintStatus.IN_PROGRESS,
+];
+
+/**
+ * Re-evaluate an employee's availability based on active task count.
+ * Sets availability_status = 'Available' if they have 0 active tasks, else 'Busy'.
+ */
+async function refreshEmployeeAvailability(sb: ReturnType<typeof getSupabaseClient>, employeeId: string): Promise<void> {
+    if (!sb || !employeeId) return;
+    const { count } = await sb
+        .from('complaints')
+        .select('id', { count: 'exact', head: true })
+        .eq('assigned_to', employeeId)
+        .in('status', ACTIVE_STATUSES);
+
+    const newStatus = (count ?? 0) > 0 ? 'Busy' : 'Available';
+    await sb.from('employees').update({ availability_status: newStatus }).eq('id', employeeId);
+}
+
+/**
+ * Returns employees in a department who have ZERO active complaints.
+ * Used by AdminDashboard for the reassign UI.
+ */
+export const getAvailableEmployees = async (department?: string): Promise<Employee[]> => {
+    const sb = getSupabaseClient();
+    if (!sb) return [];
+
+    let query = sb.from('employees').select('*');
+    if (department) query = query.eq('department', department);
+
+    const { data: allEmps, error } = await query.order('name', { ascending: true });
+    if (error || !allEmps) return [];
+
+    // For each employee count their active tasks
+    const withCounts = await Promise.all(
+        allEmps.map(async emp => {
+            const { count } = await sb
+                .from('complaints')
+                .select('id', { count: 'exact', head: true })
+                .eq('assigned_to', emp.id)
+                .in('status', ACTIVE_STATUSES);
+            return { emp, activeCount: count ?? 0 };
+        })
+    );
+
+    return withCounts
+        .filter(({ activeCount }) => activeCount === 0)
+        .map(({ emp }) => ({
+            id: emp.id,
+            name: emp.name,
+            email: emp.email,
+            department: emp.department,
+            phone: emp.phone,
+            availabilityStatus: 'Available',
+        }));
+};
 
 // ─── ADD ──────────────────────────────────────────────────────────────────
 export const addComplaint = async (complaint: Complaint): Promise<void> => {
@@ -68,19 +142,41 @@ export const addComplaint = async (complaint: Complaint): Promise<void> => {
         const list = lsGet(); list.unshift(complaint); lsSet(list); lsNotify(); return;
     }
 
-    // Auto-Assignment Logic Based on AI Department
+    // ── Smart Auto-Assignment: availability-aware, round-robin ────────────
     if (complaint.aiAnalysis?.department) {
-        const { data: empData } = await sb
+        const dept = complaint.aiAnalysis.department;
+
+        // Fetch ALL employees in this department
+        const { data: allEmps } = await sb
             .from('employees')
             .select('id')
-            .eq('department', complaint.aiAnalysis.department)
-            .eq('availability_status', 'Available')
-            .limit(1)
-            .maybeSingle();
+            .eq('department', dept);
 
-        if (empData) {
-            complaint.assignedTo = empData.id;
-            complaint.status = ComplaintStatus.ASSIGNED;
+        if (allEmps && allEmps.length > 0) {
+            // For each employee, count their currently active (non-finished) complaints
+            const availability = await Promise.all(
+                allEmps.map(async emp => {
+                    const { count } = await sb
+                        .from('complaints')
+                        .select('id', { count: 'exact', head: true })
+                        .eq('assigned_to', emp.id)
+                        .in('status', ACTIVE_STATUSES);
+                    return { id: emp.id, activeCount: count ?? 0 };
+                })
+            );
+
+            // Pick first employee with zero active tasks
+            const freeEmployee = availability.find(e => e.activeCount === 0);
+
+            if (freeEmployee) {
+                complaint.assignedTo = freeEmployee.id;
+                complaint.status = ComplaintStatus.ASSIGNED;
+                // Mark employee as Busy immediately
+                await sb.from('employees')
+                    .update({ availability_status: 'Busy' })
+                    .eq('id', freeEmployee.id);
+            }
+            // If no free employee found → complaint stays Submitted (unassigned)
         }
     }
 
@@ -106,9 +202,60 @@ export const updateComplaint = async (id: string, fields: Partial<Complaint>): P
     if (fields.completionImage !== undefined) updates.completion_image = fields.completionImage;
     if (fields.employeeLocation !== undefined) updates.employee_location = fields.employeeLocation;
     if (fields.aiAnalysis !== undefined) updates.ai_analysis = fields.aiAnalysis;
+    if (fields.aiVerification !== undefined) updates.ai_verification = fields.aiVerification;
+    if (fields.feedbackRating !== undefined) updates.feedback_rating = fields.feedbackRating;
+    if (fields.feedbackComments !== undefined) updates.feedback_comments = fields.feedbackComments;
+    if (fields.resolvedAt !== undefined) updates.resolved_at = new Date(fields.resolvedAt).toISOString();
+    if (fields.parentId !== undefined) updates.parent_id = fields.parentId;
+
+    // ── Fetch current complaint for employee side-effects ─────────────────
+    // We need the current assignedTo to refresh availability after status changes
+    let currentEmployeeId: string | undefined;
+    const needsAvailabilityRefresh =
+        fields.status === ComplaintStatus.JOB_COMPLETED ||
+        fields.status === ComplaintStatus.VERIFIED ||
+        fields.status === ComplaintStatus.REJECTED;
+
+    if (needsAvailabilityRefresh) {
+        const { data: current } = await sb.from('complaints').select('assigned_to').eq('id', id).maybeSingle();
+        currentEmployeeId = current?.assigned_to ?? undefined;
+    }
+
+    // ── If reassigning (new employee), mark old employee Available, new one Busy ─
+    if (fields.assignedTo !== undefined) {
+        const { data: current } = await sb.from('complaints').select('assigned_to').eq('id', id).maybeSingle();
+        const oldEmpId = current?.assigned_to ?? undefined;
+        // Mark new employee Busy
+        await sb.from('employees').update({ availability_status: 'Busy' }).eq('id', fields.assignedTo);
+        // Refresh old employee's availability (they may now be free)
+        if (oldEmpId && oldEmpId !== fields.assignedTo) {
+            // We pass a temporarily modified view: the current complaint won't be active for old emp after update
+            const { count } = await sb
+                .from('complaints')
+                .select('id', { count: 'exact', head: true })
+                .eq('assigned_to', oldEmpId)
+                .in('status', ACTIVE_STATUSES)
+                .neq('id', id); // exclude this complaint since it's being reassigned
+            const newStatus = (count ?? 0) > 0 ? 'Busy' : 'Available';
+            await sb.from('employees').update({ availability_status: newStatus }).eq('id', oldEmpId);
+        }
+    }
 
     const { error } = await sb.from('complaints').update(updates).eq('id', id);
     if (error) throw new Error(`[Supabase] updateComplaint: ${error.message}`);
+
+    // ── Refresh employee availability after completion / verification / rejection ─
+    if (needsAvailabilityRefresh && currentEmployeeId) {
+        await refreshEmployeeAvailability(sb, currentEmployeeId);
+    }
+};
+
+// ─── UPDATE USER AVATAR ───────────────────────────────────────────────────
+export const updateUserAvatar = async (userId: string, avatarData: string): Promise<void> => {
+    const sb = getSupabaseClient();
+    if (!sb) return; // Fallback to localStorage happens in App.tsx via setUser
+    const { error } = await sb.from('users').update({ avatar: avatarData }).eq('id', userId);
+    if (error) throw new Error(`[Supabase] updateUserAvatar: ${error.message}`);
 };
 
 // ─── SUBSCRIBE (Realtime) ─────────────────────────────────────────────────

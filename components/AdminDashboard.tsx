@@ -2,7 +2,9 @@ import React, { useState } from 'react';
 import { Complaint, ComplaintStatus, Language, Priority } from '../types';
 import { TRANSLATIONS, MOCK_EMPLOYEES, PRIORITY_COLORS, STATUS_COLORS } from '../constants';
 import MapComponent from './MapComponent';
-import { getEmployees, addEmployee as dbAddEmployee, deleteEmployee as dbDeleteEmployee, Employee as DBEmployee } from '../services/dbService';
+import AnalyticsCharts from './AnalyticsCharts';
+import { getEmployees, addEmployee as dbAddEmployee, deleteEmployee as dbDeleteEmployee, Employee as DBEmployee, getAvailableEmployees } from '../services/dbService';
+import { formatDuration } from '../utils/timeUtils';
 
 interface Props {
     lang: Language;
@@ -31,6 +33,11 @@ const AdminDashboard: React.FC<Props> = ({ lang, setLang, complaints, assignEmpl
     const [addingEmp, setAddingEmp] = useState(false);
     const [empError, setEmpError] = useState('');
 
+    // Reassign state (admin override)
+    const [showReassign, setShowReassign] = useState(false);
+    const [availableEmps, setAvailableEmps] = useState<DBEmployee[]>([]);
+    const [loadingAvail, setLoadingAvail] = useState(false);
+
     React.useEffect(() => {
         fetchEmployees();
     }, []);
@@ -45,6 +52,24 @@ const AdminDashboard: React.FC<Props> = ({ lang, setLang, complaints, assignEmpl
             setEmpError(e.message || "Failed to fetch employees");
         } finally {
             setLoadingEmployees(false);
+        }
+    };
+
+    // When a complaint is selected, load available employees for reassign
+    const handleSelectComplaint = async (c: Complaint) => {
+        setSelected(c);
+        setRejectReason('');
+        setShowReassign(false);
+        setLoadingAvail(true);
+        try {
+            // Load all employees available (no active tasks) across all departments
+            const avail = await getAvailableEmployees();
+            setAvailableEmps(avail);
+        } catch (e) {
+            console.error('Could not load available employees', e);
+            setAvailableEmps([]);
+        } finally {
+            setLoadingAvail(false);
         }
     };
 
@@ -79,16 +104,17 @@ const AdminDashboard: React.FC<Props> = ({ lang, setLang, complaints, assignEmpl
         }
     };
 
-    // Heatmap stats
+    // Heatmap stats (Masters only)
+    const masters = complaints.filter(c => !c.parentId);
     const statsData = [
-        { id: 'all', label: t.total, value: complaints.length, icon: 'fa-layer-group', bg: 'bg-slate-700', dot: '#6366f1' },
-        { id: 'new', label: t.unassigned_stat, value: complaints.filter(c => !c.assignedTo).length, icon: 'fa-inbox', bg: 'bg-indigo-800', dot: '#818cf8' },
-        { id: 'verify', label: t.verify_pending, value: complaints.filter(c => c.status === ComplaintStatus.JOB_COMPLETED).length, icon: 'fa-hourglass-half', bg: 'bg-yellow-700', dot: '#fbbf24' },
-        { id: 'critical', label: t.critical, value: complaints.filter(c => c.priority === Priority.EMERGENCY || c.priority === Priority.HIGH).length, icon: 'fa-triangle-exclamation', bg: 'bg-red-800', dot: '#f87171' },
-        { id: 'resolved', label: t.resolved, value: complaints.filter(c => c.status === ComplaintStatus.VERIFIED).length, icon: 'fa-circle-check', bg: 'bg-emerald-800', dot: '#34d399' },
+        { id: 'all', label: t.total, value: masters.length, icon: 'fa-layer-group', bg: 'bg-slate-700', dot: '#6366f1' },
+        { id: 'new', label: t.unassigned_stat, value: masters.filter(c => !c.assignedTo && c.status !== ComplaintStatus.VERIFIED).length, icon: 'fa-inbox', bg: 'bg-indigo-800', dot: '#818cf8' },
+        { id: 'verify', label: t.verify_pending, value: masters.filter(c => c.status === ComplaintStatus.JOB_COMPLETED).length, icon: 'fa-hourglass-half', bg: 'bg-yellow-700', dot: '#fbbf24' },
+        { id: 'critical', label: t.critical, value: masters.filter(c => c.priority === Priority.EMERGENCY || c.priority === Priority.HIGH).length, icon: 'fa-triangle-exclamation', bg: 'bg-red-800', dot: '#f87171' },
+        { id: 'resolved', label: t.resolved, value: masters.filter(c => c.status === ComplaintStatus.VERIFIED).length, icon: 'fa-circle-check', bg: 'bg-emerald-800', dot: '#34d399' },
     ];
 
-    const filteredComplaints = complaints.filter(c => {
+    const filteredComplaints = masters.filter(c => {
         if (tab === 'new') return !c.assignedTo && c.status !== ComplaintStatus.VERIFIED;
         if (tab === 'verify') return c.status === ComplaintStatus.JOB_COMPLETED;
         if (tab === 'critical') return c.priority === Priority.EMERGENCY || c.priority === Priority.HIGH;
@@ -97,8 +123,8 @@ const AdminDashboard: React.FC<Props> = ({ lang, setLang, complaints, assignEmpl
     });
 
     const mapMarkers = [
-        ...complaints.map(c => ({ position: c.location, title: `${c.title} (${c.status})`, type: 'complaint' as 'complaint' })),
-        ...complaints.filter(c => c.employeeLocation).map(c => ({ position: c.employeeLocation!, title: 'Employee', type: 'employee' as 'employee' })),
+        ...masters.map(c => ({ position: c.location, title: `${c.title} (${c.status})`, type: 'complaint' as 'complaint' })),
+        ...masters.filter(c => c.employeeLocation).map(c => ({ position: c.employeeLocation!, title: 'Employee', type: 'employee' as 'employee' })),
     ];
 
     const priorityBadgeClass = (p: Priority) => {
@@ -199,6 +225,9 @@ const AdminDashboard: React.FC<Props> = ({ lang, setLang, complaints, assignEmpl
                     </div>
                 </div>
 
+                {/* Analytics Charts */}
+                <AnalyticsCharts complaints={masters} />
+
                 {/* Complaints + Detail Panel */}
                 <div className="flex-1 grid grid-cols-1 md:grid-cols-2 overflow-hidden">
                     {/* --- Left: Complaint List --- */}
@@ -209,9 +238,9 @@ const AdminDashboard: React.FC<Props> = ({ lang, setLang, complaints, assignEmpl
                                 <button key={tb} onClick={() => setTab(tb)}
                                     className={`flex-1 py-1.5 px-2 text-xs font-semibold rounded-lg transition-all capitalize whitespace-nowrap ${tab === tb ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-white hover:bg-slate-700'}`}>
                                     {tb === 'new' ? t.tabs_new : tb === 'verify' ? t.tabs_verify : tb === 'all' ? t.tabs_all : 'Employees'}
-                                    {tb === 'new' && complaints.filter(c => !c.assignedTo && c.status !== ComplaintStatus.VERIFIED).length > 0 && (
+                                    {tb === 'new' && masters.filter(c => !c.assignedTo && c.status !== ComplaintStatus.VERIFIED).length > 0 && (
                                         <span className="ml-1.5 bg-indigo-400 text-[10px] px-1.5 rounded-full">
-                                            {complaints.filter(c => !c.assignedTo && c.status !== ComplaintStatus.VERIFIED).length}
+                                            {masters.filter(c => !c.assignedTo && c.status !== ComplaintStatus.VERIFIED).length}
                                         </span>
                                     )}
                                 </button>
@@ -228,13 +257,27 @@ const AdminDashboard: React.FC<Props> = ({ lang, setLang, complaints, assignEmpl
                                             <p className="text-sm">{t.no_complaints_here}</p>
                                         </div>
                                     )}
-                                    {filteredComplaints.map(c => (
+                                    {filteredComplaints.map(c => {
+                                        const duplicates = complaints.filter(sub => sub.parentId === c.id);
+                                        return (
                                         <div key={c.id}
-                                            onClick={() => { setSelected(c); setRejectReason(''); }}
+                                            onClick={() => handleSelectComplaint(c)}
                                             className={`complaint-card bg-slate-700/60 border-slate-600/50 hover:border-indigo-400 cursor-pointer ${selected?.id === c.id ? 'border-indigo-400 bg-indigo-900/30' : ''}`}>
                                             <div className="flex justify-between items-start">
                                                 <div className="flex-1 pr-2">
-                                                    <p className="font-semibold text-sm text-slate-100">{c.title}</p>
+                                                    <p className="font-semibold text-sm text-slate-100 flex items-center flex-wrap gap-2">
+                                                        {c.title}
+                                                        {duplicates.length > 0 && (
+                                                            <span className="text-[10px] bg-indigo-500/30 text-indigo-300 px-1.5 py-0.5 rounded-full border border-indigo-500/50">
+                                                                +{duplicates.length} reports
+                                                            </span>
+                                                        )}
+                                                        {c.assignedTo && (
+                                                            <span className="text-[10px] bg-violet-500/20 text-violet-300 px-1.5 py-0.5 rounded-full border border-violet-500/40">
+                                                                <i className="fas fa-robot mr-1"></i>AI Assigned
+                                                            </span>
+                                                        )}
+                                                    </p>
                                                     <p className="text-xs text-slate-400 mt-0.5">{c.category}</p>
                                                 </div>
                                                 <span className={priorityBadgeClass(c.priority)}>{c.priority}</span>
@@ -247,7 +290,7 @@ const AdminDashboard: React.FC<Props> = ({ lang, setLang, complaints, assignEmpl
                                                 {c.assignedTo && <span className="text-[11px] text-emerald-400"><i className="fas fa-user-check mr-1"></i>{t.assigned_badge}</span>}
                                             </div>
                                         </div>
-                                    ))}
+                                    )})}
                                 </>
                             ) : (
                                 <div className="space-y-3">
@@ -259,14 +302,26 @@ const AdminDashboard: React.FC<Props> = ({ lang, setLang, complaints, assignEmpl
                                         </div>
                                     ) : (
                                         (employees.length > 0 ? employees : MOCK_EMPLOYEES).map((emp: any) => {
-                                            const assignedCount = complaints.filter(c => c.assignedTo === emp.id && c.status !== ComplaintStatus.VERIFIED).length;
+                                            const activeCount = complaints.filter(c =>
+                                                c.assignedTo === emp.id &&
+                                                [ComplaintStatus.SUBMITTED, ComplaintStatus.ASSIGNED, ComplaintStatus.ON_THE_WAY,
+                                                 ComplaintStatus.REACHED, ComplaintStatus.IN_PROGRESS].includes(c.status as any)
+                                            ).length;
+                                            const isBusy = activeCount > 0;
                                             return (
                                                 <div key={emp.id} className="bg-slate-700/50 p-3 rounded-xl border border-slate-600/50 flex flex-col gap-2 group relative">
                                                     <div className="flex justify-between items-start">
                                                         <div>
                                                             <p className="text-sm font-bold text-slate-200 flex items-center gap-2">
                                                                 {emp.name}
-                                                                <span className={`w-2 h-2 rounded-full ${(!emp.availabilityStatus || emp.availabilityStatus === 'Available') ? 'bg-emerald-400' : 'bg-red-400'}`}></span>
+                                                                <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${
+                                                                    isBusy
+                                                                        ? 'bg-red-900/50 text-red-300 border border-red-700/50'
+                                                                        : 'bg-emerald-900/50 text-emerald-300 border border-emerald-700/50'
+                                                                }`}>
+                                                                    <span className={`inline-block w-1.5 h-1.5 rounded-full mr-1 ${isBusy ? 'bg-red-400' : 'bg-emerald-400'}`}></span>
+                                                                    {isBusy ? `Busy (${activeCount} task${activeCount > 1 ? 's' : ''})` : 'Available'}
+                                                                </span>
                                                             </p>
                                                             <p className="text-xs text-slate-400 mt-0.5"><i className="fas fa-envelope mr-1"></i> {emp.email}</p>
                                                             {emp.phone && <p className="text-xs text-slate-400 mt-0.5"><i className="fas fa-phone mr-1"></i> {emp.phone}</p>}
@@ -280,7 +335,7 @@ const AdminDashboard: React.FC<Props> = ({ lang, setLang, complaints, assignEmpl
                                                             {emp.department || emp.specialty}
                                                         </span>
                                                         <span className="text-[10px] bg-slate-800 text-slate-300 px-2 py-0.5 rounded-md border border-slate-600/50">
-                                                            <i className="fas fa-clipboard-list mr-1"></i> {assignedCount} Assigned
+                                                            <i className="fas fa-clipboard-list mr-1"></i> {activeCount} Active Tasks
                                                         </span>
                                                     </div>
                                                 </div>
@@ -355,12 +410,30 @@ const AdminDashboard: React.FC<Props> = ({ lang, setLang, complaints, assignEmpl
                                         <span className={priorityBadgeClass(selected.priority)}>{selected.priority}</span>
                                     </div>
                                     <p className="text-sm text-slate-300 mb-2">{selected.description}</p>
-                                    {selected.aiAnalysis && (
-                                        <div className="text-xs text-slate-400 bg-slate-800/50 rounded-lg p-2.5 border border-slate-600/30">
-                                            <i className="fas fa-robot mr-1 text-indigo-400"></i>
-                                            <strong>AI:</strong> {selected.aiAnalysis.reason} · <em>{selected.aiAnalysis.department}</em> · {selected.aiAnalysis.estimatedTime}
+                                    {selected.status === ComplaintStatus.VERIFIED && selected.resolvedAt ? (
+                                        <div className="text-xs text-emerald-400 bg-emerald-900/20 rounded-lg p-2.5 border border-emerald-500/30 flex items-center gap-2">
+                                            <i className="fas fa-check-circle text-emerald-500"></i>
+                                            <strong>Resolved in:</strong> {formatDuration(selected.resolvedAt - selected.createdAt)}
                                         </div>
-                                    )}
+                                    ) : selected.aiAnalysis ? (
+                                        <div className="text-xs text-slate-400 bg-slate-800/50 rounded-lg p-3 border border-slate-600/30">
+                                            <p className="mb-2"><i className="fas fa-robot mr-1 text-indigo-400"></i><strong>AI Analysis:</strong> {selected.aiAnalysis.reason}</p>
+                                            <div className="flex gap-4">
+                                                <span><i className="fas fa-building mr-1"></i> {selected.aiAnalysis.department}</span>
+                                                <span className="text-indigo-300 font-semibold"><i className="fas fa-clock mr-1"></i> Est: {selected.aiAnalysis.estimatedTime}</span>
+                                            </div>
+                                            {selected.aiAnalysis.equipmentNeeded && selected.aiAnalysis.equipmentNeeded.length > 0 && (
+                                                <div className="mt-3 pt-2 border-t border-slate-700/50">
+                                                    <p className="font-bold text-slate-300 mb-1"><i className="fas fa-toolbox text-amber-500 mr-1"></i> Suggested Resources:</p>
+                                                    <ul className="list-disc list-inside text-slate-400 space-y-0.5 ml-1">
+                                                        {selected.aiAnalysis.equipmentNeeded.map((eq, i) => (
+                                                            <li key={i}>{eq}</li>
+                                                        ))}
+                                                    </ul>
+                                                </div>
+                                            )}
+                                        </div>
+                                    ) : null}
                                     {selected.image && (
                                         <div className="mt-3">
                                             <p className="text-xs text-slate-400 mb-1">{t.citizen_photo}</p>
@@ -368,6 +441,36 @@ const AdminDashboard: React.FC<Props> = ({ lang, setLang, complaints, assignEmpl
                                         </div>
                                     )}
                                 </div>
+
+                                {/* DUPLICATE REPORTS PREVIEW */}
+                                {(() => {
+                                    const selectedDuplicates = complaints.filter(sub => sub.parentId === selected.id);
+                                    if (selectedDuplicates.length > 0) {
+                                        return (
+                                            <div className="bg-slate-700/30 border border-slate-600/30 rounded-xl p-3 space-y-2 mt-3">
+                                                <p className="font-bold text-slate-300 text-xs uppercase tracking-wider mb-2">
+                                                    <i className="fas fa-copy text-indigo-400 mr-2"></i> Duplicate Citizen Reports
+                                                </p>
+                                                {selectedDuplicates.map(dup => (
+                                                    <div key={dup.id} className="bg-slate-800/80 p-2.5 rounded-lg border border-slate-700/80 flex gap-3">
+                                                        {dup.image ? (
+                                                            <img src={dup.image} alt="Dup" className="w-14 h-14 object-cover rounded-md border border-slate-600" />
+                                                        ) : (
+                                                            <div className="w-14 h-14 bg-slate-700 rounded-md border border-slate-600 flex items-center justify-center text-slate-500">
+                                                                <i className="fas fa-image"></i>
+                                                            </div>
+                                                        )}
+                                                        <div className="flex-1 overflow-hidden">
+                                                            <p className="font-semibold text-slate-200 text-sm truncate">{dup.title}</p>
+                                                            <p className="text-[11px] text-slate-400 mt-0.5 line-clamp-2 leading-tight">{dup.description}</p>
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        );
+                                    }
+                                    return null;
+                                })()}
 
                                 {/* VERIFY SECTION */}
                                 {selected.status === ComplaintStatus.JOB_COMPLETED && (
@@ -381,6 +484,16 @@ const AdminDashboard: React.FC<Props> = ({ lang, setLang, complaints, assignEmpl
                                                 ? <img src={selected.completionImage} className="w-full h-40 object-contain bg-black rounded-lg" alt="Proof" />
                                                 : <p className="text-red-400 text-xs">{t.no_image_proof}</p>}
                                         </div>
+
+                                        {selected.aiVerification && (
+                                            <div className={`text-xs p-2.5 rounded-lg border flex items-start gap-2 ${selected.aiVerification.isResolved ? 'bg-emerald-900/40 border-emerald-500/50 text-emerald-300' : 'bg-red-900/40 border-red-500/50 text-red-300'}`}>
+                                                <i className={`fas fa-robot mt-0.5 ${selected.aiVerification.isResolved ? 'text-emerald-400' : 'text-red-400'}`}></i>
+                                                <div>
+                                                    <strong>AI Verification {selected.aiVerification.isResolved ? 'Passed' : 'Failed'}:</strong>
+                                                    <p className="opacity-90 mt-0.5">{selected.aiVerification.reason}</p>
+                                                </div>
+                                            </div>
+                                        )}
                                         <button onClick={() => { adminVerify(selected.id); setSelected(null); }}
                                             className="btn-primary btn-success">
                                             <i className="fas fa-check-circle mr-2"></i> {t.verify_resolve}
@@ -422,26 +535,69 @@ const AdminDashboard: React.FC<Props> = ({ lang, setLang, complaints, assignEmpl
                                     );
                                 })()}
 
-                                {/* ASSIGN SECTION */}
-                                {!selected.assignedTo && selected.status !== ComplaintStatus.VERIFIED && (
+                                {/* ASSIGN / REASSIGN SECTION */}
+                                {selected.status !== ComplaintStatus.VERIFIED && (
                                     <div className="space-y-2">
-                                        <p className="text-sm font-semibold text-slate-200">{t.assign_employee}</p>
-                                        {(employees.length > 0 ? employees : MOCK_EMPLOYEES).map((emp: any) => (
-                                            <button key={emp.id}
-                                                onClick={() => { assignEmployee(selected.id, emp.id); setSelected(null); }}
-                                                className="w-full flex items-center justify-between bg-slate-700/60 hover:bg-emerged-900/40 hover:bg-emerald-900/40 border border-slate-600 hover:border-emerald-500/50 px-4 py-3 rounded-xl transition-all">
-                                                <div className="flex items-center gap-3">
-                                                    <div className="w-8 h-8 rounded-full bg-emerald-700 flex items-center justify-center text-sm font-bold">
-                                                        {emp.name ? emp.name[0].toUpperCase() : '?'}
+                                        <div className="flex items-center justify-between">
+                                            <p className="text-sm font-semibold text-slate-200">
+                                                {selected.assignedTo ? (
+                                                    <><i className="fas fa-arrows-rotate mr-1.5 text-violet-400"></i>Reassign Task (Admin Override)</>
+                                                ) : (
+                                                    <><i className="fas fa-user-plus mr-1.5 text-emerald-400"></i>{t.assign_employee}</>
+                                                )}
+                                            </p>
+                                            {selected.assignedTo && (
+                                                <button
+                                                    onClick={() => setShowReassign(r => !r)}
+                                                    className={`text-[11px] font-semibold px-3 py-1 rounded-full border transition-all ${
+                                                        showReassign
+                                                            ? 'bg-violet-600 text-white border-violet-500'
+                                                            : 'bg-slate-700 text-violet-300 border-violet-600/50 hover:bg-violet-900/40'
+                                                    }`}
+                                                >
+                                                    {showReassign ? 'Cancel' : 'Reassign'}
+                                                </button>
+                                            )}
+                                        </div>
+
+                                        {/* Show employee list when: not yet assigned, or admin clicked Reassign */}
+                                        {(!selected.assignedTo || showReassign) && (
+                                            <>
+                                                {loadingAvail ? (
+                                                    <div className="text-center py-4 text-slate-500 text-xs">
+                                                        <i className="fas fa-spinner fa-spin mr-1"></i>Loading available employees...
                                                     </div>
-                                                    <div className="text-left">
-                                                        <p className="font-semibold text-slate-100 text-sm">{emp.name}</p>
-                                                        <p className="text-xs text-slate-400">{emp.department || emp.specialty}</p>
+                                                ) : availableEmps.length === 0 ? (
+                                                    <div className="text-center py-4 text-slate-500 text-xs bg-slate-700/30 rounded-xl border border-slate-600/40">
+                                                        <i className="fas fa-user-clock text-xl block mb-1 text-slate-600"></i>
+                                                        All employees are currently busy.<br/>No one available for auto-assignment.
                                                     </div>
-                                                </div>
-                                                <span className="text-xs bg-emerald-900/60 text-emerald-400 border border-emerald-600/30 px-2 py-1 rounded-full">{t.available}</span>
-                                            </button>
-                                        ))}
+                                                ) : (
+                                                    availableEmps.map((emp: any) => (
+                                                        <button key={emp.id}
+                                                            onClick={() => {
+                                                                assignEmployee(selected.id, emp.id);
+                                                                setSelected(null);
+                                                                setShowReassign(false);
+                                                            }}
+                                                            className="w-full flex items-center justify-between bg-slate-700/60 hover:bg-emerald-900/40 border border-slate-600 hover:border-emerald-500/50 px-4 py-3 rounded-xl transition-all">
+                                                            <div className="flex items-center gap-3">
+                                                                <div className="w-8 h-8 rounded-full bg-emerald-700 flex items-center justify-center text-sm font-bold">
+                                                                    {emp.name ? emp.name[0].toUpperCase() : '?'}
+                                                                </div>
+                                                                <div className="text-left">
+                                                                    <p className="font-semibold text-slate-100 text-sm">{emp.name}</p>
+                                                                    <p className="text-xs text-slate-400">{emp.department || emp.specialty}</p>
+                                                                </div>
+                                                            </div>
+                                                            <span className="text-xs bg-emerald-900/60 text-emerald-400 border border-emerald-600/30 px-2 py-1 rounded-full">
+                                                                <i className="fas fa-circle-check mr-1"></i>Free
+                                                            </span>
+                                                        </button>
+                                                    ))
+                                                )}
+                                            </>
+                                        )}
                                     </div>
                                 )}
 

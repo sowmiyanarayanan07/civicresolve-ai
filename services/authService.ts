@@ -53,6 +53,7 @@ export async function loginWithOtp(email: string, name?: string, role: Role = Ro
                 email: existing.email,
                 role,
                 langPreference: existing.lang_preference || 'en',
+                avatar: existing.avatar,
             };
             // Update role in DB
             await sb.from('users').update({ role, lang_preference: u.langPreference }).eq('email', lower);

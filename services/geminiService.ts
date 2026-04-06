@@ -57,8 +57,13 @@ export const analyzeComplaint = async (
             reason: { type: Type.STRING },
             department: { type: Type.STRING, enum: ["light", "pothole", "drainage", "water_supply"] },
             estimatedTime: { type: Type.STRING, description: "e.g., 24 hours" },
+            equipmentNeeded: { 
+              type: Type.ARRAY, 
+              items: { type: Type.STRING }, 
+              description: "List of specific equipment, tools, and resources the dispatch team will need (e.g., ['1 Chainsaw crew', '1 Woodchipper', 'Traffic cones for 2 lanes']). Focus on physical resources needed." 
+            },
           },
-          required: ["category", "priority", "reason", "department", "estimatedTime"],
+          required: ["category", "priority", "reason", "department", "estimatedTime", "equipmentNeeded"],
         },
       }
     });
@@ -66,6 +71,122 @@ export const analyzeComplaint = async (
     return JSON.parse(response.text || '{}');
   } catch (error) {
     console.error("AI Analysis Error:", error);
+    return null;
+  }
+};
+
+/**
+ * Verify if the complaint has been successfully resolved by comparing 'before' and 'after' images.
+ */
+export const verifyResolution = async (
+  afterImageBase64: string,
+  description: string,
+  beforeImageBase64?: string
+) => {
+  try {
+    const prompt = `
+      You are an AI quality assurance inspector for a city grievance system.
+      The worker has submitted an "After" photo claiming the issue is resolved.
+      ${beforeImageBase64 ? 'You are also provided the original "Before" photo for comparison.' : ''}
+      Issue description: ${description}
+      
+      Analyze the "After" photo (and compare it to the "Before" photo if provided). 
+      Does the "After" photo clearly show the issue described has been fixed/resolved?
+      Output strictly in JSON format.
+    `;
+
+    const parts: any[] = [{ text: prompt }];
+
+    // Add BEFORE image first, if available
+    if (beforeImageBase64) {
+      parts.push({
+        inlineData: {
+          mimeType: 'image/jpeg',
+          data: beforeImageBase64.includes(',') ? beforeImageBase64.split(',')[1] : beforeImageBase64,
+        },
+      });
+      parts.push({ text: "The above is the BEFORE photo." });
+    }
+
+    // Add AFTER image
+    parts.push({
+      inlineData: {
+        mimeType: 'image/jpeg',
+        data: afterImageBase64.includes(',') ? afterImageBase64.split(',')[1] : afterImageBase64,
+      },
+    });
+    parts.push({ text: "The above is the AFTER photo submitted by the worker." });
+
+    const response = await getAI().models.generateContent({
+      model: 'gemini-2.5-flash',
+      contents: { parts },
+      config: {
+        responseMimeType: 'application/json',
+        responseSchema: {
+          type: Type.OBJECT,
+          properties: {
+            isResolved: { type: Type.BOOLEAN, description: "True if the issue appears resolved based on the after photo." },
+            reason: { type: Type.STRING, description: "A brief 1-2 sentence explanation of your decision." },
+          },
+          required: ["isResolved", "reason"],
+        },
+      }
+    });
+
+    return JSON.parse(response.text || '{"isResolved": false, "reason": "Failed to parse AI response."}');
+  } catch (error) {
+    console.error("AI Verification Error:", error);
+    return null;
+  }
+};
+
+/**
+ * Determine if a newly submitted complaint refers to the *exact same* physical incident
+ * as any of the nearby candidate complaints. Returns the ID of the master complaint, or null.
+ */
+export const findDuplicateIncident = async (
+  newTitle: string,
+  newDescription: string,
+  candidates: { id: string; title: string; description: string }[]
+): Promise<string | null> => {
+  if (!candidates || candidates.length === 0) return null;
+
+  try {
+    const prompt = `
+      You are an AI duplication-detection engine for a city grievance system.
+      A citizen just submitted a new complaint. Below is their report:
+      Title: "${newTitle}"
+      Description: "${newDescription}"
+
+      There are also several existing complaints reported nearby. Here they are:
+      ${candidates.map(c => `ID: ${c.id} | Title: "${c.title}" | Description: "${c.description}"`).join('\n')}
+
+      Analyze the text to determine if the NEW complaint is describing the **exact same physical incident** (e.g., the exact same fallen tree, the exact same burst pipe) as any of the existing candidates.
+      - If it IS the exact same incident, output the ID of the matching candidate in the "duplicateOf" field.
+      - If it is a DIFFERENT incident (even if it's the same type of problem but likely a different occurrence), output null for "duplicateOf".
+      
+      Output strictly in JSON format.
+    `;
+
+    const response = await getAI().models.generateContent({
+      model: 'gemini-2.5-flash',
+      contents: [{ role: 'user', parts: [{ text: prompt }] }],
+      config: {
+        responseMimeType: 'application/json',
+        responseSchema: {
+          type: Type.OBJECT,
+          properties: {
+            duplicateOf: { type: Type.STRING, description: "The ID of the candidate complaint that matches, or null if no match.", nullable: true },
+            reason: { type: Type.STRING, description: "A brief 1-sentence reason for your decision." },
+          },
+        },
+      }
+    });
+
+    const result = JSON.parse(response.text || '{}');
+    return result.duplicateOf || null;
+  } catch (error) {
+    console.error("AI Duplication Error:", error);
     return null;
   }
 };
@@ -132,5 +253,42 @@ Be concise, friendly, and practical. If asked about specific locations or office
   } catch (error: any) {
     console.error("Chat Error:", error);
     return { text: `Sorry, I couldn't process that request. (${error.message || 'Error'})`, grounding: null };
+  }
+};
+
+/**
+ * Extract title and description from a voice transcript
+ */
+export const extractVoiceReport = async (transcript: string) => {
+  const prompt = `
+    You are an AI assistant processing a voice-transcribed civic complaint from a citizen.
+    Extract a concise, professional title and a detailed description from the transcription.
+    If the user mentions a location, include it in the description.
+    
+    Transcript: "${transcript}"
+    
+    Return ONLY a valid JSON object with keys "title" and "description".
+    Example:
+    {
+      "title": "Massive Pothole on Main Street",
+      "description": "There is a massive pothole outside the Starbucks on Main Street."
+    }
+  `;
+
+  try {
+    const response = await getAI().models.generateContent({
+      model: 'gemini-2.5-flash',
+      contents: [{ role: 'user', parts: [{ text: prompt }] }],
+    });
+
+    const text = response.text;
+    if (!text) {
+      return { title: 'Voice Report', description: transcript };
+    }
+    const jsonStr = text.replace(/```json/g, '').replace(/```/g, '').trim();
+    return JSON.parse(jsonStr) as { title: string, description: string };
+  } catch (error) {
+    console.error("Voice extraction failed:", error);
+    return { title: 'Voice Report', description: transcript }; // fallback
   }
 };

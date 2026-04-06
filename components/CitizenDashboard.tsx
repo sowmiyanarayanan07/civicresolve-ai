@@ -1,9 +1,13 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Role, User, Language, Complaint, ComplaintStatus, Priority } from '../types';
 import { TRANSLATIONS, STATUS_COLORS } from '../constants';
 import MapComponent from './MapComponent';
-import { analyzeComplaint } from '../services/geminiService';
+import { analyzeComplaint, findDuplicateIncident, extractVoiceReport } from '../services/geminiService';
+import { calculateDistance } from '../utils/geoUtils';
 import ChatBot from './ChatBot';
+import { formatDuration } from '../utils/timeUtils';
+import CivicRewardsTab from './CivicRewardsTab';
+import { computeRewards } from '../utils/civicRewards';
 
 interface Props {
     user: User;
@@ -11,11 +15,13 @@ interface Props {
     setLang: (l: Language) => void;
     complaints: Complaint[];
     addComplaint: (c: Complaint) => void;
+    submitFeedback: (complaintId: string, rating: number, comments?: string) => void;
+    updateUserAvatar: (avatarData: string) => void;
     onLogout: () => void;
 }
 
-const CitizenDashboard: React.FC<Props> = ({ user, lang, setLang, complaints, addComplaint, onLogout }) => {
-    const [view, setView] = useState<'report' | 'list'>('report');
+const CitizenDashboard: React.FC<Props> = ({ user, lang, setLang, complaints, addComplaint, submitFeedback, updateUserAvatar, onLogout }) => {
+    const [view, setView] = useState<'report' | 'list' | 'rewards'>('report');
     const [title, setTitle] = useState('');
     const [desc, setDesc] = useState('');
     const [image, setImage] = useState<string | null>(null);
@@ -23,6 +29,104 @@ const CitizenDashboard: React.FC<Props> = ({ user, lang, setLang, complaints, ad
     const [gpsCaptured, setGpsCaptured] = useState(false);
     const [gpsCapturing, setGpsCapturing] = useState(false);
     const [isAnalyzing, setIsAnalyzing] = useState(false);
+
+    // ── Voice drive-by reporting ──
+    const [isListening, setIsListening] = useState(false);
+    const [voiceTranscript, setVoiceTranscript] = useState('');
+
+    // ── Real-time duplicate detection state ──────────────────────────────────
+    type DupStatus = 'idle' | 'checking' | 'found' | 'none';
+    const [dupStatus, setDupStatus] = useState<DupStatus>('idle');
+    const [dupMatch, setDupMatch] = useState<Complaint | null>(null);
+    const [dupDismissed, setDupDismissed] = useState(false);
+    const dupTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+    // ── New-badge toast notification ─────────────────────────────────────────
+    const [newBadgeToast, setNewBadgeToast] = useState<string | null>(null);
+    const prevEarnedBadgesRef = useRef<Set<string>>(new Set());
+
+    useEffect(() => {
+        const profile = computeRewards(complaints);
+        const currentEarned = new Set(profile.badges.filter(b => b.earned).map(b => b.id));
+        const prev = prevEarnedBadgesRef.current;
+
+        if (prev.size > 0) {
+            // Find newly earned badges since last render
+            const newOnes = [...currentEarned].filter(id => !prev.has(id));
+            if (newOnes.length > 0) {
+                const badge = profile.badges.find(b => b.id === newOnes[0])!;
+                setNewBadgeToast(`${badge.icon} You earned the "${badge.name}" badge!`);
+                setTimeout(() => setNewBadgeToast(null), 4000);
+            }
+        }
+        prevEarnedBadgesRef.current = currentEarned;
+    }, [complaints]);
+    
+    // ── Voice Input logic ────────────────────────────────────────────────────
+    const recognitionRef = useRef<any>(null);
+
+    useEffect(() => {
+        if ('window' in globalThis && ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window)) {
+            const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+            recognitionRef.current = new SpeechRecognition();
+            recognitionRef.current.continuous = false;
+            recognitionRef.current.interimResults = true;
+
+            recognitionRef.current.onresult = (event: any) => {
+                let currentTranscript = '';
+                for (let i = event.resultIndex; i < event.results.length; ++i) {
+                    if (event.results[i].isFinal) {
+                        currentTranscript += event.results[i][0].transcript;
+                    }
+                }
+                if (currentTranscript.trim()) setVoiceTranscript(currentTranscript);
+            };
+
+            recognitionRef.current.onerror = (event: any) => {
+                console.error('Speech recognition error', event.error);
+                setIsListening(false);
+            };
+
+            recognitionRef.current.onend = async () => {
+                setIsListening(false);
+                // When recording ends, extract with Gemini
+                setVoiceTranscript((prev) => {
+                    if (prev.trim()) {
+                        processVoiceToText(prev);
+                    }
+                    return prev;
+                });
+            };
+        }
+    }, []);
+
+    const toggleListening = () => {
+        if (isListening) {
+            recognitionRef.current?.stop();
+        } else {
+            setVoiceTranscript('');
+            recognitionRef.current?.start();
+            setIsListening(true);
+        }
+    };
+
+    const processVoiceToText = async (transcript: string) => {
+        setIsAnalyzing(true);
+        try {
+            const parsed = await extractVoiceReport(transcript);
+            setTitle(parsed.title || 'Voice Report');
+            setDesc(parsed.description || transcript);
+        } catch (error) {
+            console.error('Failed to parse voice report', error);
+            setDesc(transcript);
+        } finally {
+            setIsAnalyzing(false);
+        }
+    };
+
+    // Feedback state map: complaintId -> { rating, comments }
+    const [feedbackState, setFeedbackState] = useState<Record<string, { rating: number; comments: string }>>({});
+    
     const t = TRANSLATIONS[lang];
 
     // Auto-locate on mount — silently update to real GPS
@@ -54,6 +158,99 @@ const CitizenDashboard: React.FC<Props> = ({ user, lang, setLang, complaints, ad
         }
     };
 
+    // ── Debounced real-time duplicate check ───────────────────────────────────
+    useEffect(() => {
+        // Only run when user has typed meaningful content
+        if (title.trim().length < 8 || desc.trim().length < 15) {
+            setDupStatus('idle');
+            setDupMatch(null);
+            return;
+        }
+        if (dupDismissed) return; // user already dismissed the warning
+
+        if (dupTimerRef.current) clearTimeout(dupTimerRef.current);
+
+        dupTimerRef.current = setTimeout(async () => {
+            setDupStatus('checking');
+
+            // Step 1: Fast local prefilter — proximity (2 km) only
+            const RADIUS_M = 2000;
+            const nearby = complaints.filter(c =>
+                c.status !== ComplaintStatus.VERIFIED &&
+                !c.parentId &&
+                calculateDistance(location.lat, location.lng, c.location.lat, c.location.lng) <= RADIUS_M
+            );
+
+            if (nearby.length === 0) { setDupStatus('none'); return; }
+
+            // Step 2: AI confirmation (only if local candidates exist)
+            try {
+                const matchId = await findDuplicateIncident(
+                    title.trim(),
+                    desc.trim(),
+                    nearby.map(c => ({ id: c.id, title: c.title, description: c.description }))
+                );
+                if (matchId) {
+                    const matched = nearby.find(c => c.id === matchId) ?? null;
+                    setDupMatch(matched);
+                    setDupStatus('found');
+                } else {
+                    setDupStatus('none');
+                }
+            } catch {
+                setDupStatus('none');
+            }
+        }, 1500); // 1.5s debounce
+
+        return () => { if (dupTimerRef.current) clearTimeout(dupTimerRef.current); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [title, desc]);
+
+    // Reset dismissal when user clears the form
+    useEffect(() => {
+        if (title === '' && desc === '') {
+            setDupDismissed(false);
+            setDupStatus('idle');
+            setDupMatch(null);
+        }
+    }, [title, desc]);
+
+    // ── Upvote existing issue (link as duplicate and submit instantly) ─────────
+    const handleUpvote = useCallback(async () => {
+        if (!dupMatch) return;
+        setIsAnalyzing(true);
+        setSubmitError('');
+        try {
+            const base64Data = image ? image.split(',')[1] : undefined;
+            const analysis = await analyzeComplaint(title, desc, base64Data, `${location.lat},${location.lng}`);
+            const newComplaint: Complaint = {
+                id: `C-${Date.now()}`,
+                citizenId: user.id,
+                citizenEmail: user.email,
+                title: title || dupMatch.title,
+                description: desc || dupMatch.description,
+                image: image || undefined,
+                location,
+                category: analysis?.category || dupMatch.category || 'General',
+                priority: analysis?.priority || dupMatch.priority || Priority.LOW,
+                status: ComplaintStatus.SUBMITTED,
+                createdAt: Date.now(),
+                aiAnalysis: analysis
+                    ? { reason: analysis.reason, department: analysis.department, estimatedTime: analysis.estimatedTime, equipmentNeeded: analysis.equipmentNeeded }
+                    : undefined,
+                parentId: dupMatch.id, // ← Link as duplicate
+            };
+            await addComplaint(newComplaint);
+            setTitle(''); setDesc(''); setImage(null); setGpsCaptured(false);
+            setDupStatus('idle'); setDupMatch(null); setDupDismissed(false);
+            setView('list');
+        } catch (err: any) {
+            setSubmitError(err?.message || 'Failed to submit. Please try again.');
+        } finally {
+            setIsAnalyzing(false);
+        }
+    }, [dupMatch, title, desc, image, location, user]);
+
     const [submitError, setSubmitError] = useState('');
 
     const handleSubmit = async () => {
@@ -63,6 +260,26 @@ const CitizenDashboard: React.FC<Props> = ({ user, lang, setLang, complaints, ad
         try {
             const base64Data = image ? image.split(',')[1] : undefined;
             const analysis = await analyzeComplaint(title, desc, base64Data, `${location.lat},${location.lng}`);
+
+            // SMART DUPLICATE GROUPING
+            let overrideParentId: string | undefined = undefined;
+            const twoKm = 2000;
+            const candidates = complaints.filter(c => 
+                c.status !== ComplaintStatus.VERIFIED && 
+                !c.parentId && 
+                (!analysis || c.category === analysis.category) &&
+                calculateDistance(location.lat, location.lng, c.location.lat, c.location.lng) <= twoKm
+            );
+
+            if (candidates.length > 0) {
+                const dupId = await findDuplicateIncident(
+                    title, 
+                    desc, 
+                    candidates.map(c => ({ id: c.id, title: c.title, description: c.description }))
+                );
+                if (dupId) overrideParentId = dupId;
+            }
+
             const newComplaint: Complaint = {
                 id: `C-${Date.now()}`,
                 citizenId: user.id,
@@ -76,8 +293,9 @@ const CitizenDashboard: React.FC<Props> = ({ user, lang, setLang, complaints, ad
                 status: ComplaintStatus.SUBMITTED,
                 createdAt: Date.now(),
                 aiAnalysis: analysis
-                    ? { reason: analysis.reason, department: analysis.department, estimatedTime: analysis.estimatedTime }
+                    ? { reason: analysis.reason, department: analysis.department, estimatedTime: analysis.estimatedTime, equipmentNeeded: analysis.equipmentNeeded }
                     : undefined,
+                parentId: overrideParentId,
             };
             await addComplaint(newComplaint);  // ← await ensures state updates before view switch
             setTitle(''); setDesc(''); setImage(null); setGpsCaptured(false);
@@ -96,18 +314,56 @@ const CitizenDashboard: React.FC<Props> = ({ user, lang, setLang, complaints, ad
         return 'badge badge-low';
     };
 
+    const handleAvatarUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (e.target.files?.[0]) {
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                const base64 = reader.result as string;
+                updateUserAvatar(base64);
+            };
+            reader.readAsDataURL(e.target.files[0]);
+        }
+    };
+
     return (
         <div className="citizen-bg pb-24">
+            {/* ── New Badge Toast ── */}
+            {newBadgeToast && (
+                <div className="fixed top-4 left-1/2 -translate-x-1/2 z-[9999] animate-bounce-in">
+                    <div className="flex items-center gap-3 bg-emerald-900 text-white px-5 py-3 rounded-2xl shadow-2xl border border-emerald-500/50 text-sm font-bold backdrop-blur-md">
+                        <i className="fas fa-trophy text-amber-400"></i>
+                        <span>{newBadgeToast}</span>
+                        <button onClick={() => setNewBadgeToast(null)} className="ml-2 text-white/60 hover:text-white">
+                            <i className="fas fa-xmark"></i>
+                        </button>
+                    </div>
+                </div>
+            )}
+
             {/* ── Header ── */}
             <header className="dash-header dash-header-citizen">
-                <div>
-                    <h1 style={{ fontFamily: 'Space Grotesk', letterSpacing: '-0.02em' }}>
-                        <i className="fas fa-leaf mr-2 opacity-90" />
-                        {t.app_name}
-                    </h1>
-                    <div className="citizen-greeting mt-1" style={{ display: 'inline-flex' }}>
-                        <i className="fas fa-user-circle" />
-                        <span>{user.name}</span>
+                <div className="flex items-center gap-3">
+                    <label className="relative cursor-pointer group">
+                        <div className="w-10 h-10 shadow-sm rounded-full bg-indigo-100 border border-indigo-200 overflow-hidden flex items-center justify-center flex-shrink-0">
+                            {user.avatar ? (
+                                <img src={user.avatar} alt="Avatar" className="w-full h-full object-cover" />
+                            ) : (
+                                <i className="fas fa-user text-indigo-400 text-lg"></i>
+                            )}
+                        </div>
+                        <div className="absolute inset-0 bg-black/40 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                            <i className="fas fa-camera text-white text-xs"></i>
+                        </div>
+                        <input type="file" accept="image/*" className="hidden" onChange={handleAvatarUpload} />
+                    </label>
+                    <div>
+                        <h1 style={{ fontFamily: 'Space Grotesk', letterSpacing: '-0.02em' }}>
+                            <i className="fas fa-leaf mr-2 opacity-90" />
+                            {t.app_name}
+                        </h1>
+                        <div className="citizen-greeting mt-1" style={{ display: 'inline-flex' }}>
+                            <span>{user.name}</span>
+                        </div>
                     </div>
                 </div>
                 <div className="flex items-center gap-2">
@@ -137,13 +393,40 @@ const CitizenDashboard: React.FC<Props> = ({ user, lang, setLang, complaints, ad
             </header>
 
             <main className="p-4 max-w-lg mx-auto space-y-4">
-                {view === 'report' ? (
+                {view === 'rewards' ? (
+                    <CivicRewardsTab complaints={complaints} userName={user.name} />
+                ) : view === 'report' ? (
                     <div className="fade-in-up space-y-4">
-                        {/* Section title */}
-                        <div className="citizen-section-title">
-                            <span className="title-icon"><i className="fas fa-circle-plus" /></span>
-                            {t.report_complaint}
+                        {/* Section title & Voice Mic Feature */}
+                        <div className="flex items-center justify-between">
+                            <div className="citizen-section-title">
+                                <span className="title-icon"><i className="fas fa-circle-plus" /></span>
+                                {t.report_complaint}
+                            </div>
+                            
+                            <button 
+                                onClick={toggleListening}
+                                className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-bold transition-all shadow-sm border ${
+                                    isListening 
+                                    ? 'bg-red-500 text-white border-red-600 animate-pulse shadow-red-500/30' 
+                                    : 'bg-indigo-100 text-indigo-700 border-indigo-200 hover:bg-indigo-200 shadow-indigo-500/10'
+                                }`}
+                                title="Drive-by voice reporting"
+                            >
+                                <i className={`fas ${isListening ? 'fa-microphone-lines' : 'fa-microphone'}`}></i>
+                                {isListening ? 'Listening...' : 'Voice Report'}
+                            </button>
                         </div>
+
+                        {/* Processing Voice Overlay */}
+                        {isListening && (
+                            <div className="citizen-form-section flex items-center justify-center p-4 bg-red-50 border-red-200 animate-pulse">
+                                <div className="text-red-600 font-semibold text-sm flex items-center gap-2">
+                                    <i className="fas fa-microphone-lines"></i>
+                                    Recording: Speak clearly to report the issue...
+                                </div>
+                            </div>
+                        )}
 
                         {/* ─── STEP 1: Title ─── */}
                         <div className="citizen-form-section space-y-3">
@@ -172,6 +455,81 @@ const CitizenDashboard: React.FC<Props> = ({ user, lang, setLang, complaints, ad
                                 onChange={e => setDesc(e.target.value)}
                             />
                         </div>
+
+                        {/* ─── DUPLICATE DETECTION BANNER ─── */}
+                        {dupStatus === 'checking' && title.trim().length >= 8 && (
+                            <div className="flex items-center gap-2 px-3 py-2 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-700 animate-pulse">
+                                <i className="fas fa-circle-notch fa-spin text-amber-500"></i>
+                                <span className="font-medium">Checking for similar reports nearby…</span>
+                            </div>
+                        )}
+
+                        {dupStatus === 'found' && dupMatch && !dupDismissed && (
+                            <div className="rounded-2xl border-2 border-amber-400/60 bg-amber-50 overflow-hidden shadow-md">
+                                {/* Header */}
+                                <div className="flex items-center gap-2 px-4 py-3 bg-amber-400/20">
+                                    <div className="w-7 h-7 rounded-full bg-amber-500 flex items-center justify-center flex-shrink-0">
+                                        <i className="fas fa-triangle-exclamation text-white text-xs"></i>
+                                    </div>
+                                    <div className="flex-1">
+                                        <p className="font-bold text-amber-900 text-sm">Similar issue already reported!</p>
+                                        <p className="text-[11px] text-amber-700">Someone nearby reported the same problem</p>
+                                    </div>
+                                    <button
+                                        onClick={() => { setDupDismissed(true); setDupStatus('idle'); }}
+                                        className="text-amber-500 hover:text-amber-700 transition-colors ml-1"
+                                    >
+                                        <i className="fas fa-xmark text-sm"></i>
+                                    </button>
+                                </div>
+
+                                {/* Matched complaint preview */}
+                                <div className="px-4 py-3 bg-white/60 border-t border-amber-200">
+                                    <div className="flex items-start gap-3">
+                                        {dupMatch.image ? (
+                                            <img src={dupMatch.image} alt="Existing" className="w-14 h-14 rounded-xl object-cover border border-amber-200 flex-shrink-0" />
+                                        ) : (
+                                            <div className="w-14 h-14 rounded-xl bg-amber-100 border border-amber-200 flex items-center justify-center flex-shrink-0">
+                                                <i className="fas fa-image text-amber-400"></i>
+                                            </div>
+                                        )}
+                                        <div className="flex-1 min-w-0">
+                                            <p className="font-semibold text-slate-800 text-sm truncate">{dupMatch.title}</p>
+                                            <p className="text-xs text-slate-500 mt-0.5 line-clamp-2">{dupMatch.description}</p>
+                                            <div className="flex items-center gap-3 mt-1.5 text-[10px] text-slate-500">
+                                                <span><i className="fas fa-tag mr-1 text-green-600"></i>{dupMatch.category}</span>
+                                                <span><i className="fas fa-map-marker-alt mr-1 text-red-400"></i>
+                                                    {Math.round(calculateDistance(location.lat, location.lng, dupMatch.location.lat, dupMatch.location.lng))}m away
+                                                </span>
+                                                <span className="font-semibold" style={{ color: dupMatch.status === ComplaintStatus.VERIFIED ? '#16a34a' : '#d97706' }}>
+                                                    <i className="fas fa-circle-half-stroke mr-1"></i>{dupMatch.status}
+                                                </span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* CTAs */}
+                                <div className="px-4 py-3 flex gap-2 border-t border-amber-200 bg-amber-50/80">
+                                    <button
+                                        onClick={handleUpvote}
+                                        disabled={isAnalyzing}
+                                        className="flex-1 bg-amber-500 hover:bg-amber-600 disabled:opacity-60 text-white text-xs font-bold py-2 rounded-xl transition-all flex items-center justify-center gap-1.5 shadow-sm"
+                                    >
+                                        {isAnalyzing
+                                            ? <><i className="fas fa-spinner fa-spin"></i> Submitting…</>
+                                            : <><i className="fas fa-thumbs-up"></i> Yes, upvote this issue</>
+                                        }
+                                    </button>
+                                    <button
+                                        onClick={() => { setDupDismissed(true); setDupStatus('idle'); }}
+                                        className="flex-1 bg-white hover:bg-slate-50 text-slate-600 text-xs font-semibold py-2 rounded-xl border border-slate-200 transition-all"
+                                    >
+                                        <i className="fas fa-circle-xmark mr-1 text-slate-400"></i> No, mine is different
+                                    </button>
+                                </div>
+                            </div>
+                        )}
 
                         {/* ─── STEP 3: Photo ─── */}
                         <div className="citizen-form-section space-y-3">
@@ -308,7 +666,18 @@ const CitizenDashboard: React.FC<Props> = ({ user, lang, setLang, complaints, ad
                         {complaints.map((c: Complaint) => (
                             <div key={c.id} className="citizen-card slide-in-right">
                                 <div className="flex justify-between items-start mb-2 pl-3">
-                                    <h3 className="font-bold text-slate-800 text-sm">{c.title}</h3>
+                                    <div className="flex items-center gap-2 pr-3 flex-1 break-words pb-1">
+                                        {user.avatar ? (
+                                            <img src={user.avatar} className="w-6 h-6 rounded-full object-cover shadow-sm bg-white border border-slate-200" alt="Citizen Avatar" />
+                                        ) : (
+                                            <div className="w-6 h-6 rounded-full bg-indigo-50 text-indigo-500 flex items-center justify-center text-[10px] font-bold shadow-sm border border-slate-200">
+                                                <i className="fas fa-user-circle" />
+                                            </div>
+                                        )}
+                                        <h3 className="font-bold text-slate-800 text-sm leading-snug">
+                                            {c.title}
+                                        </h3>
+                                    </div>
                                     <span className={priorityBadgeClass(c.priority)}>{c.priority}</span>
                                 </div>
                                 <p className="text-sm text-slate-500 mb-3 pl-3">{c.description}</p>
@@ -317,9 +686,9 @@ const CitizenDashboard: React.FC<Props> = ({ user, lang, setLang, complaints, ad
                                     <span className="flex items-center gap-1 text-slate-400">
                                         <i className="fas fa-tag" style={{ color: '#16a34a' }} /> {c.category}
                                     </span>
-                                    <span className={`font-semibold ${STATUS_COLORS[c.status] || 'text-slate-600'}`}>
+                                    <span className={`font-semibold ${STATUS_COLORS[c.parentId ? complaints.find(p => p.id === c.parentId)?.status || c.status : c.status] || 'text-slate-600'}`}>
                                         <i className="fas fa-circle-half-stroke mr-1" />
-                                        {c.status}
+                                        {c.parentId ? complaints.find(p => p.id === c.parentId)?.status || c.status : c.status}
                                     </span>
                                 </div>
 
@@ -328,14 +697,19 @@ const CitizenDashboard: React.FC<Props> = ({ user, lang, setLang, complaints, ad
                                         <strong>{t.admin_note}</strong> {c.adminComment}
                                     </div>
                                 )}
-                                {c.aiAnalysis && (
+                                {c.status === ComplaintStatus.VERIFIED && c.resolvedAt ? (
+                                    <div className="mt-2 ml-3 inline-flex items-center gap-2 px-2.5 py-1.5 bg-green-100 text-green-800 rounded-lg text-xs font-bold border border-green-200">
+                                        <i className="fas fa-check-circle" />
+                                        Resolved in {formatDuration(c.resolvedAt - c.createdAt)}
+                                    </div>
+                                ) : c.aiAnalysis ? (
                                     <div className="mt-2 ml-3 citizen-ai-pill">
-                                        <i className="fas fa-robot" />
+                                        <i className="fas fa-robot text-emerald-600" />
                                         <span>{c.aiAnalysis.department}</span>
                                         <span className="text-slate-400">•</span>
-                                        <span>Est: {c.aiAnalysis.estimatedTime}</span>
+                                        <span className="font-bold text-indigo-700">Est. Time: {c.aiAnalysis.estimatedTime}</span>
                                     </div>
-                                )}
+                                ) : null}
 
                                 {/* Issue tracking mini-map */}
                                 {c.location && (
@@ -355,6 +729,63 @@ const CitizenDashboard: React.FC<Props> = ({ user, lang, setLang, complaints, ad
                                         )}
                                     </div>
                                 )}
+
+                                {/* Feedback Section for Resolved Complaints */}
+                                {c.status === ComplaintStatus.VERIFIED && (
+                                    <div className="mt-4 ml-3 p-3 bg-green-50/50 border border-green-100 rounded-xl">
+                                        <h4 className="text-xs font-bold text-green-800 mb-2 uppercase tracking-wide">
+                                            <i className="fas fa-star text-yellow-500 mr-1" /> Service Feedback
+                                        </h4>
+                                        {c.feedbackRating ? (
+                                            <div className="space-y-1">
+                                                <div className="flex gap-1 text-yellow-400 text-sm">
+                                                    {[1, 2, 3, 4, 5].map(star => (
+                                                        <i key={star} className={`fas fa-star ${star <= c.feedbackRating! ? 'text-yellow-500' : 'text-slate-200'}`} />
+                                                    ))}
+                                                </div>
+                                                {c.feedbackComments && (
+                                                    <p className="text-sm text-slate-600 italic mt-2">"{c.feedbackComments}"</p>
+                                                )}
+                                                <p className="text-xs text-green-600 font-medium mt-1">Thank you for your feedback!</p>
+                                            </div>
+                                        ) : (
+                                            <div className="space-y-3">
+                                                <div className="flex gap-1">
+                                                    {[1, 2, 3, 4, 5].map(star => {
+                                                        const currentRating = feedbackState[c.id]?.rating || 0;
+                                                        return (
+                                                            <button
+                                                                key={star}
+                                                                onClick={() => setFeedbackState(prev => ({ ...prev, [c.id]: { ...prev[c.id], rating: star } }))}
+                                                                className={`text-xl transition-all hover:scale-110 ${star <= currentRating ? 'text-yellow-500' : 'text-slate-200 hover:text-yellow-300'}`}
+                                                            >
+                                                                <i className="fas fa-star" />
+                                                            </button>
+                                                        );
+                                                    })}
+                                                </div>
+                                                <textarea
+                                                    placeholder="Optional comments about the service..."
+                                                    className="w-full bg-white border border-green-200 rounded-lg p-2 text-sm focus:outline-none focus:border-green-400 focus:ring-1 focus:ring-green-400 resize-none min-h-[60px]"
+                                                    value={feedbackState[c.id]?.comments || ''}
+                                                    onChange={e => setFeedbackState(prev => ({ ...prev, [c.id]: { ...prev[c.id], comments: e.target.value } }))}
+                                                />
+                                                <button
+                                                    onClick={() => {
+                                                        const state = feedbackState[c.id];
+                                                        if (state?.rating) {
+                                                            submitFeedback(c.id, state.rating, state.comments);
+                                                        }
+                                                    }}
+                                                    disabled={!feedbackState[c.id]?.rating}
+                                                    className="w-full py-2 bg-green-600 hover:bg-green-700 disabled:opacity-50 disabled:hover:bg-green-600 text-white text-xs font-bold rounded-lg transition-colors shadow-sm"
+                                                >
+                                                    Submit Feedback
+                                                </button>
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
                             </div>
                         ))}
                     </div>
@@ -370,6 +801,11 @@ const CitizenDashboard: React.FC<Props> = ({ user, lang, setLang, complaints, ad
                 <button onClick={() => setView('list')} className={view === 'list' ? 'active' : ''}>
                     <i className="fas fa-list-check text-xl" />
                     <span>{t.my_complaints}</span>
+                </button>
+                <button onClick={() => setView('rewards')} className={view === 'rewards' ? 'active' : ''}
+                    style={view === 'rewards' ? { color: '#f59e0b' } : {}}>
+                    <i className="fas fa-trophy text-xl" />
+                    <span>Rewards</span>
                 </button>
             </div>
 

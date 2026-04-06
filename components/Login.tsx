@@ -4,7 +4,6 @@ import { Role, User, Language } from '../types';
 import { loginWithOtp } from '../services/authService';
 import { sendOtp, verifyOtpAsync } from '../services/otpService';
 import { TRANSLATIONS } from '../constants';
-import civicBg from '../src/assets/civic-bg.png';
 
 type Panel = 'citizen' | 'employee' | 'admin';
 type Step = 'email' | 'otp';
@@ -299,14 +298,7 @@ const Login: React.FC<LoginProps> = ({ onLogin, lang, setLang }) => {
         <div className="min-h-screen flex flex-col md:flex-row">
 
             {/* ── LEFT HERO ── */}
-            <div className="hero-gradient hidden md:flex md:w-5/12 flex-col items-center justify-center p-12 text-white relative overflow-hidden shadow-2xl z-10">
-                {/* Enhanced Green Glows */}
-                <div className="absolute inset-0 opacity-20 mix-blend-screen"
-                    style={{ backgroundImage: 'radial-gradient(circle at 20% 40%, #4ade80 0%, transparent 50%), radial-gradient(circle at 80% 80%, #10b981 0%, transparent 50%)' }} />
-                
-                {/* Floating decorative elements */}
-                <div className="absolute top-10 right-10 w-24 h-24 rounded-full border border-white/10 opacity-30 animate-pulse" />
-                <div className="absolute bottom-20 left-10 w-40 h-40 rounded-full border border-green-400/10 opacity-20" />
+            <div className="bg-green-700 hidden md:flex md:w-5/12 flex-col items-center justify-center p-12 text-white relative overflow-hidden shadow-2xl z-10">
 
                 <div className="relative z-10 w-full max-w-sm flex flex-col items-center">
                     {/* Premium App Icon */}
@@ -352,24 +344,8 @@ const Login: React.FC<LoginProps> = ({ onLogin, lang, setLang }) => {
                 </div>
             </div>
 
-            {/* ── RIGHT FORM (Enhanced with Civic Image Background) ── */}
-            <div className="flex-1 flex flex-col items-center justify-center p-5 min-h-screen relative overflow-hidden">
-                {/* Generated Background Image */}
-                <div 
-                    className="absolute inset-0 z-0 bg-cover bg-center bg-no-repeat"
-                    style={{ 
-                        backgroundImage: `url(${civicBg})`,
-                        filter: 'brightness(1.05) contrast(1.05)'
-                    }} 
-                />
-                
-                {/* Subtle Overlay to ensure form readability */}
-                <div className="absolute inset-0 z-0 bg-green-900/10 backdrop-blur-[2px]" />
-
-                {/* Animated Gradient Orbs (Subtle over image) */}
-                <div className="absolute top-[-10%] right-[-5%] w-96 h-96 bg-green-400 rounded-full mix-blend-overlay filter blur-3xl opacity-40 animate-[pulse_8s_ease-in-out_infinite]" />
-                <div className="absolute bottom-[-10%] left-[-10%] w-[500px] h-[500px] bg-emerald-300 rounded-full mix-blend-overlay filter blur-3xl opacity-50 animate-[pulse_10s_ease-in-out_infinite_reverse]" />
-
+            {/* ── RIGHT FORM ── */}
+            <div className="flex-1 flex flex-col items-center justify-center p-5 min-h-screen relative overflow-hidden bg-white">
                 {/* Main Auth Panel with Glassmorphism */}
                 <div className="auth-panel w-full max-w-md p-8 fade-in-up relative z-10 backdrop-blur-2xl bg-white/85 shadow-2xl border border-white/60">
 

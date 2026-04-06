@@ -32,7 +32,20 @@ async function supabaseStoreOtp(email: string, otp: string): Promise<void> {
     const { url, key } = getSupabaseConfig();
     if (!url || !key) {
         console.error('Supabase config missing in browser');
-        return;
+        throw new Error('Supabase configuration is missing. Please check VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY in your .env.local file.');
+    }
+
+    // Validate that the key is a proper JWT (must start with "eyJ")
+    // Supabase publishable keys (sb_publishable_...) are NOT valid for REST API calls
+    if (!key.startsWith('eyJ')) {
+        const errMsg =
+            'Invalid Supabase anon key format.\n\n' +
+            'Your VITE_SUPABASE_ANON_KEY appears to be a "publishable key" (starts with sb_publishable_...) ' +
+            'which is NOT supported by the Supabase REST API.\n\n' +
+            'Fix: Go to your Supabase project → Settings → API → copy the "anon / public" JWT key ' +
+            '(it starts with "eyJ...") and update VITE_SUPABASE_ANON_KEY in your .env.local file.';
+        console.error(errMsg);
+        throw new Error(errMsg);
     }
 
     const expiresAt = new Date(Date.now() + OTP_TTL_MINUTES * 60 * 1000).toISOString();
@@ -51,10 +64,23 @@ async function supabaseStoreOtp(email: string, otp: string): Promise<void> {
         if (!res.ok) {
             const body = await res.text();
             console.error('Failed to store OTP in Supabase:', res.status, body);
-            throw new Error(`Connection Error: Could not save OTP state. Please ensure the 'otp_store' table exists in Supabase.`);
+            if (res.status === 401) {
+                throw new Error(`Supabase authentication failed (401). Your anon key may be wrong or expired. Please check VITE_SUPABASE_ANON_KEY in your .env.local file.`);
+            }
+            throw new Error(`Connection Error (${res.status}): Could not save OTP state. Please ensure the 'otp_store' table exists in Supabase.`);
         }
     } catch (err: any) {
         console.error('Error in supabaseStoreOtp:', err);
+        // Re-wrap a bare "Failed to fetch" with a more helpful message
+        if (err?.message === 'Failed to fetch') {
+            throw new Error(
+                'Network error: Could not reach Supabase.\n\n' +
+                'Please check:\n' +
+                '1. Your VITE_SUPABASE_URL is correct in .env.local\n' +
+                '2. You are connected to the internet\n' +
+                '3. The Supabase project is not paused'
+            );
+        }
         throw err;
     }
 }
