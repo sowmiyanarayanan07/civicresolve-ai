@@ -110,7 +110,7 @@ const AnalyticsCharts: React.FC<Props> = ({ complaints }) => {
 
     return (
         <div className="border-b border-slate-700/50 bg-slate-900">
-            <div className="max-w-5xl mx-auto px-6 py-5">
+            <div className="w-full px-6 py-5">
                 {/* Header row */}
                 <div className="flex items-center justify-between mb-4">
                     <div className="flex items-center gap-2">

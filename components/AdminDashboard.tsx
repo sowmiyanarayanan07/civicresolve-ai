@@ -237,7 +237,7 @@ const AdminDashboard: React.FC<Props> = ({ lang, setLang, complaints, assignEmpl
                     </div>
                 </div>
 
-                <div className="mt-auto pt-4 space-y-2">
+                <div className="pt-4 space-y-2">
                     {/* Clear All Complaints */}
                     <button
                         onClick={async () => {
@@ -331,9 +331,9 @@ const AdminDashboard: React.FC<Props> = ({ lang, setLang, complaints, assignEmpl
                 <AnalyticsCharts complaints={masters} />
 
                 {/* Complaints + Detail Panel */}
-                <div className="flex-1 grid grid-cols-1 md:grid-cols-2 overflow-hidden">
-                    {/* --- Left: Complaint List --- */}
-                    <div className="border-r border-slate-700/50 flex flex-col overflow-hidden">
+                <div className="flex-1 grid grid-cols-1 lg:grid-cols-12 overflow-hidden">
+                    {/* --- Left: Complaint/Employee List --- */}
+                    <div className="lg:col-span-4 border-r border-slate-700/50 flex flex-col overflow-hidden">
                         {/* Tabs */}
                         <div className="flex gap-1 p-3 border-b border-slate-700/50 bg-slate-800 flex-wrap">
                             {(['new', 'verify', 'all', 'employees'] as const).map(tb => (
@@ -450,7 +450,7 @@ const AdminDashboard: React.FC<Props> = ({ lang, setLang, complaints, assignEmpl
                     </div>
 
                     {/* --- Right: Action Panel --- */}
-                    <div className="flex flex-col overflow-hidden bg-slate-800">
+                    <div className="lg:col-span-8 flex flex-col overflow-hidden bg-slate-800">
                         <div className="p-4 border-b border-slate-700/50">
                             <h2 className="font-bold text-slate-100" style={{ fontFamily: 'Space Grotesk' }}>{t.action_details}</h2>
                         </div>
