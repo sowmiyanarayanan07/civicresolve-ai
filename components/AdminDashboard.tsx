@@ -316,7 +316,7 @@ const AdminDashboard: React.FC<Props> = ({ lang, setLang, complaints, assignEmpl
                 ) : (
                 <>
                 {/* Live Map */}
-                <div className="h-40 md:h-48 relative border-b border-slate-700/50 flex-shrink-0">
+                <div className="h-56 md:h-72 relative border-b border-slate-700/50 flex-shrink-0">
                     <MapComponent center={{ lat: 12.9716, lng: 80.2433 }} markers={mapMarkers} zoom={12} />
                     <div className="absolute top-3 left-3 z-[400] glass-card px-3 py-2">
                         <p className="text-xs font-bold text-white mb-1">{t.live_map}</p>
@@ -335,7 +335,7 @@ const AdminDashboard: React.FC<Props> = ({ lang, setLang, complaints, assignEmpl
                     {/* --- Left: Complaint List --- */}
                     <div className="border-r border-slate-700/50 flex flex-col overflow-hidden">
                         {/* Tabs */}
-                        <div className="flex gap-1 p-2 border-b border-slate-700/50 bg-slate-800 flex-wrap">
+                        <div className="flex gap-1 p-3 border-b border-slate-700/50 bg-slate-800 flex-wrap">
                             {(['new', 'verify', 'all', 'employees'] as const).map(tb => (
                                 <button key={tb} onClick={() => setTab(tb)}
                                     className={`flex-1 py-1.5 px-2 text-xs font-semibold rounded-lg transition-all capitalize whitespace-nowrap ${tab === tb ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-white hover:bg-slate-700'}`}>
@@ -350,7 +350,7 @@ const AdminDashboard: React.FC<Props> = ({ lang, setLang, complaints, assignEmpl
                         </div>
 
                         {/* List */}
-                        <div className="flex-1 overflow-y-auto p-2 space-y-2">
+                        <div className="flex-1 overflow-y-auto p-3 space-y-2">
                             {tab !== 'employees' ? (
                                 <>
                                     {filteredComplaints.length === 0 && (
@@ -451,13 +451,13 @@ const AdminDashboard: React.FC<Props> = ({ lang, setLang, complaints, assignEmpl
 
                     {/* --- Right: Action Panel --- */}
                     <div className="flex flex-col overflow-hidden bg-slate-800">
-                        <div className="p-3 border-b border-slate-700/50">
+                        <div className="p-4 border-b border-slate-700/50">
                             <h2 className="font-bold text-slate-100" style={{ fontFamily: 'Space Grotesk' }}>{t.action_details}</h2>
                         </div>
 
                         {tab === 'employees' ? (
                             <div className="flex-1 overflow-y-auto p-5">
-                                <div className="glass-card p-5 rounded-2xl border border-indigo-500/30 bg-indigo-900/10 max-w-sm mx-auto mt-4">
+                                <div className="glass-card p-5 rounded-2xl border border-indigo-500/30 bg-indigo-900/10 w-full mt-4">
                                     <h3 className="text-lg font-bold text-white mb-1"><i className="fas fa-user-plus mr-2 text-indigo-400"></i>Add Employee</h3>
                                     <p className="text-xs text-slate-400 mb-5">Register a new field worker into the system.</p>
                                     
@@ -504,9 +504,9 @@ const AdminDashboard: React.FC<Props> = ({ lang, setLang, complaints, assignEmpl
                                 </div>
                             </div>
                         ) : selected ? (
-                            <div className="flex-1 overflow-y-auto p-3 space-y-3">
+                            <div className="flex-1 overflow-y-auto p-4 space-y-4">
                                 {/* Complaint Info */}
-                                <div className="bg-slate-700/50 rounded-xl p-3 border border-slate-600/50">
+                                <div className="bg-slate-700/50 rounded-xl p-4 border border-slate-600/50">
                                     <div className="flex justify-between items-start mb-2">
                                         <p className="font-bold text-indigo-300">{selected.title}</p>
                                         <span className={priorityBadgeClass(selected.priority)}>{selected.priority}</span>
@@ -539,7 +539,7 @@ const AdminDashboard: React.FC<Props> = ({ lang, setLang, complaints, assignEmpl
                                     {selected.image && (
                                         <div className="mt-3">
                                             <p className="text-xs text-slate-400 mb-1">{t.citizen_photo}</p>
-                                            <img src={selected.image} className="w-full h-24 object-cover rounded-lg" alt="Report" />
+                                            <img src={selected.image} className="w-full h-32 object-cover rounded-lg" alt="Report" />
                                         </div>
                                     )}
                                 </div>
@@ -576,7 +576,7 @@ const AdminDashboard: React.FC<Props> = ({ lang, setLang, complaints, assignEmpl
 
                                 {/* VERIFY SECTION */}
                                 {selected.status === ComplaintStatus.JOB_COMPLETED && (
-                                    <div className="bg-emerald-900/30 border border-emerald-500/30 rounded-xl p-3 space-y-3">
+                                    <div className="bg-emerald-900/30 border border-emerald-500/30 rounded-xl p-4 space-y-3">
                                         <h3 className="font-bold text-emerald-300 flex items-center gap-2">
                                             <i className="fas fa-clipboard-check"></i> {t.verification_required}
                                         </h3>
@@ -616,7 +616,7 @@ const AdminDashboard: React.FC<Props> = ({ lang, setLang, complaints, assignEmpl
                                 {selected.assignedTo && selected.status !== ComplaintStatus.VERIFIED && (() => {
                                     const assignedEmp = [...employees, ...MOCK_EMPLOYEES].find((e: any) => e.id === selected.assignedTo);
                                     return assignedEmp ? (
-                                        <div className="bg-emerald-900/20 border border-emerald-600/30 rounded-xl p-3">
+                                        <div className="bg-emerald-900/20 border border-emerald-600/30 rounded-xl p-4">
                                             <p className="text-xs text-emerald-400 uppercase tracking-wider font-semibold mb-2">
                                                 <i className="fas fa-user-check mr-1"></i> Assigned Worker
                                             </p>
@@ -704,7 +704,7 @@ const AdminDashboard: React.FC<Props> = ({ lang, setLang, complaints, assignEmpl
                                 )}
 
                                 {selected.status === ComplaintStatus.VERIFIED && (
-                                    <div className="bg-emerald-900/30 border border-emerald-500/30 p-3 rounded-xl text-center text-emerald-300 font-bold">
+                                    <div className="bg-emerald-900/30 border border-emerald-500/30 p-4 rounded-xl text-center text-emerald-300 font-bold">
                                         <i className="fas fa-circle-check text-2xl mb-2 block text-emerald-400"></i>
                                         {t.verified_msg}
                                     </div>
