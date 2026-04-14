@@ -109,9 +109,9 @@ const AnalyticsCharts: React.FC<Props> = ({ complaints }) => {
     const peakDay = [...barData].sort((a, b) => b.count - a.count)[0];
 
     return (
-        <div className="px-4 py-4 border-b border-slate-700/50 bg-slate-900">
+        <div className="px-3 py-2 border-b border-slate-700/50 bg-slate-900">
             {/* Header row */}
-            <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center gap-2">
                     <div className="w-7 h-7 rounded-lg bg-indigo-600/30 border border-indigo-500/30 flex items-center justify-center">
                         <i className="fas fa-chart-bar text-indigo-400 text-xs"></i>
@@ -139,11 +139,11 @@ const AnalyticsCharts: React.FC<Props> = ({ complaints }) => {
             </div>
 
             {/* Charts Row */}
-            <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
 
                 {/* ── Bar Chart (3/5 width) ── */}
-                <div className="md:col-span-3 bg-slate-800/50 border border-slate-700/40 rounded-2xl p-4">
-                    <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">
+                <div className="md:col-span-3 bg-slate-800/50 border border-slate-700/40 rounded-xl p-3">
+                    <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-2">
                         <i className="fas fa-calendar-alt mr-1.5 text-indigo-400"></i>
                         Issues Reported — Last 7 Days
                     </p>
@@ -153,7 +153,7 @@ const AnalyticsCharts: React.FC<Props> = ({ complaints }) => {
                             <span>No data yet</span>
                         </div>
                     ) : (
-                        <ResponsiveContainer width="100%" height={150}>
+                        <ResponsiveContainer width="100%" height={100}>
                             <BarChart data={barData} margin={{ top: 4, right: 4, left: -20, bottom: 0 }} barCategoryGap="30%">
                                 <CartesianGrid strokeDasharray="3 3" stroke="#334155" vertical={false} />
                                 <XAxis
@@ -184,7 +184,7 @@ const AnalyticsCharts: React.FC<Props> = ({ complaints }) => {
                             </BarChart>
                         </ResponsiveContainer>
                     )}
-                    <div className="flex gap-3 mt-2 text-[10px] text-slate-500">
+                    <div className="flex gap-3 mt-1 text-[10px] text-slate-500">
                         <span><span className="inline-block w-2 h-2 rounded-sm bg-indigo-500 mr-1"></span>Today</span>
                         <span><span className="inline-block w-2 h-2 rounded-sm bg-orange-500 mr-1"></span>Peak day</span>
                         <span><span className="inline-block w-2 h-2 rounded-sm bg-slate-700 mr-1"></span>Other days</span>
@@ -192,8 +192,8 @@ const AnalyticsCharts: React.FC<Props> = ({ complaints }) => {
                 </div>
 
                 {/* ── Donut Chart (2/5 width) ── */}
-                <div className="md:col-span-2 bg-slate-800/50 border border-slate-700/40 rounded-2xl p-4">
-                    <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">
+                <div className="md:col-span-2 bg-slate-800/50 border border-slate-700/40 rounded-xl p-3">
+                    <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-2">
                         <i className="fas fa-chart-pie mr-1.5 text-violet-400"></i>
                         Issues by Category
                     </p>
@@ -204,7 +204,7 @@ const AnalyticsCharts: React.FC<Props> = ({ complaints }) => {
                         </div>
                     ) : (
                         <>
-                            <ResponsiveContainer width="100%" height={130}>
+                            <ResponsiveContainer width="100%" height={90}>
                                 <PieChart>
                                     <Pie
                                         data={donutData}

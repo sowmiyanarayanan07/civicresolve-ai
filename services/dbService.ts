@@ -374,6 +374,58 @@ export const deleteEmployee = async (id: string): Promise<void> => {
     if (error) throw new Error(error.message);
 };
 
+// ─── CRISIS MODE (Real-time via Supabase app_settings) ──────────────────
+/**
+ * Subscribe to the crisis_mode setting in real-time.
+ * Calls `callback(true/false)` immediately and on every change.
+ * Returns an unsubscribe function.
+ */
+export const subscribeToCrisisMode = (callback: (active: boolean) => void): (() => void) => {
+    const sb = getSupabaseClient();
+    if (!sb) {
+        // Fallback: read once from localStorage
+        try { callback(localStorage.getItem('civic_crisis_mode') === 'true'); } catch { callback(false); }
+        return () => {};
+    }
+
+    // Fetch current value immediately
+    sb.from('app_settings')
+        .select('value')
+        .eq('key', 'crisis_mode')
+        .maybeSingle()
+        .then(({ data }) => {
+            callback(data?.value === 'true');
+        });
+
+    // Subscribe to realtime changes
+    const channel = sb
+        .channel('crisis-mode-channel')
+        .on(
+            'postgres_changes',
+            { event: '*', schema: 'public', table: 'app_settings', filter: 'key=eq.crisis_mode' },
+            (payload: { new: Record<string, unknown> }) => {
+                callback((payload.new as { value?: string })?.value === 'true');
+            }
+        )
+        .subscribe();
+
+    return () => { sb.removeChannel(channel); };
+};
+
+/**
+ * Persist the crisis mode value to Supabase (upsert).
+ * Also mirrors to localStorage as a fast-path for same-session reads.
+ */
+export const setCrisisModeDB = async (active: boolean): Promise<void> => {
+    try { localStorage.setItem('civic_crisis_mode', String(active)); } catch {}
+    const sb = getSupabaseClient();
+    if (!sb) return;
+    const { error } = await sb
+        .from('app_settings')
+        .upsert({ key: 'crisis_mode', value: String(active) }, { onConflict: 'key' });
+    if (error) console.error('[Supabase] setCrisisModeDB:', error.message);
+};
+
 // ─── ADMIN: CLEAR ALL COMPLAINTS ─────────────────────────────────────────
 export const deleteAllComplaints = async (): Promise<void> => {
     const sb = getSupabaseClient();

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { Role, User, Language, Complaint, ComplaintStatus, Location } from './types';
-import { subscribeToComplaints, addComplaint as dbAddComplaint, updateComplaint, deleteAllComplaints as dbDeleteAllComplaints, updateUserAvatar as dbUpdateUserAvatar } from './services/dbService';
+import { subscribeToComplaints, addComplaint as dbAddComplaint, updateComplaint, deleteAllComplaints as dbDeleteAllComplaints, updateUserAvatar as dbUpdateUserAvatar, subscribeToCrisisMode, setCrisisModeDB } from './services/dbService';
 import { signOut, restoreSession } from './services/authService';
 import Login from './components/Login';
 import CitizenDashboard from './components/CitizenDashboard';
@@ -19,13 +19,23 @@ const App: React.FC = () => {
     try { return localStorage.getItem('civic_crisis_mode') === 'true'; } catch { return false; }
   });
 
-  const setCrisisMode = (val: boolean) => {
+  const setCrisisMode = async (val: boolean) => {
     setCrisisModeState(val);
-    try { localStorage.setItem('civic_crisis_mode', String(val)); } catch {}
+    await setCrisisModeDB(val);
     // Apply/remove body class for global CSS hooks
     if (val) document.body.classList.add('crisis-active');
     else document.body.classList.remove('crisis-active');
   };
+
+  // Subscribe to real-time crisis mode
+  useEffect(() => {
+    const unsub = subscribeToCrisisMode((active) => {
+        setCrisisModeState(active);
+        if (active) document.body.classList.add('crisis-active');
+        else document.body.classList.remove('crisis-active');
+    });
+    return unsub;
+  }, []);
 
   // Sync body class on initial load
   React.useEffect(() => {
