@@ -129,6 +129,16 @@ export const TRANSLATIONS = {
     verify_pending: "Verify Pending",
     critical: "Critical",
     resolved: "Resolved",
+    // Crisis Mode
+    crisis_mode: "Crisis Mode",
+    crisis_mode_on: "CRISIS MODE ACTIVE",
+    crisis_mode_off: "Enable Crisis Mode",
+    crisis_banner_title: "🚨 DISASTER RESPONSE MODE",
+    crisis_banner_desc: "Only emergency reports are being accepted. Select your emergency type below.",
+    crisis_toggle_confirm: "Activate Crisis Mode? This will transform the app into an emergency triage system.",
+    crisis_deactivate_confirm: "Deactivate Crisis Mode and return to normal operations?",
+    crisis_category_label: "Emergency Type",
+    crisis_report_label: "Report Emergency",
   },
   ta: {
     app_name: "\u0B95\u0BC1\u0B9F\u0BBF\u0BAE\u0B95\u0BCD\u0B95\u0BB3\u0BCD \u0BA4\u0BC0\u0BB0\u0BCD\u0BB5\u0BC1 AI",
@@ -258,8 +268,47 @@ export const TRANSLATIONS = {
     verify_pending: "\u0B9A\u0BB0\u0BBF\u0BAA\u0BBE\u0BB0\u0BCD\u0BAA\u0BCD\u0BAA\u0BC1 \u0BA8\u0BBF\u0BB2\u0BC1\u0BB5\u0BC8",
     critical: "\u0B85\u0BB5\u0B9A\u0BB0\u0BAE\u0BCD",
     resolved: "\u0BA4\u0BC0\u0BB0\u0BCD\u0B95\u0BCD\u0B95\u0BAA\u0BCD\u0BAA\u0B9F\u0BCD\u0B9F\u0BA4\u0BC1",
+    // Crisis Mode (Tamil)
+    crisis_mode: "\u0B85\u0BB5\u0B9A\u0BB0 \u0BA8\u0BBF\u0BB2\u0BC8",
+    crisis_mode_on: "\u0B85\u0BB5\u0B9A\u0BB0 \u0BA8\u0BBF\u0BB2\u0BC8 \u0B87\u0BAF\u0B99\u0BCD\u0B95\u0BC1\u0B95\u0BBF\u0BB1\u0BA4\u0BC1",
+    crisis_mode_off: "\u0B85\u0BB5\u0B9A\u0BB0 \u0BA8\u0BBF\u0BB2\u0BC8\u0BAF\u0BC8 \u0B87\u0BAF\u0B95\u0BCD\u0B95\u0BB5\u0BC1\u0BAE\u0BCD",
+    crisis_banner_title: "\u0B9A\u0BAE\u0BCD\u0BAD\u0BB5 \u0BAE\u0BC1\u0B95\u0BBE\u0BAE\u0BCD",
+    crisis_banner_desc: "\u0B85\u0BB5\u0B9A\u0BB0 \u0BAA\u0BC1\u0B95\u0BBE\u0BB0\u0BCD\u0B95\u0BB3\u0BCD \u0BAE\u0B9F\u0BCD\u0B9F\u0BC1\u0BAE\u0BC7 \u0B8F\u0BB1\u0BCD\u0BB1\u0BC1\u0B95\u0BCD\u0B95\u0BCA\u0BB3\u0BCD\u0BB3\u0BAA\u0BCD\u0BAA\u0B9F\u0BC1\u0B95\u0BBF\u0BA9\u0BCD\u0BB1\u0BA9.",
+    crisis_toggle_confirm: "\u0B85\u0BB5\u0B9A\u0BB0 \u0BA8\u0BBF\u0BB2\u0BC8\u0BAF\u0BC8 \u0B87\u0BAF\u0B95\u0BCD\u0B95\u0BB5\u0BC1\u0BAE\u0BBE?",
+    crisis_deactivate_confirm: "\u0B87\u0BAF\u0B95\u0BCD\u0B95\u0BA4\u0BCD\u0BA4\u0BC8 \u0BA8\u0BBF\u0BB0\u0BC1\u0BA4\u0BCD\u0BA4\u0BC1\u0B95\u0BBF\u0BB1\u0BA4\u0BBE?",
+    crisis_category_label: "\u0B85\u0BB5\u0B9A\u0BB0 \u0BB5\u0B95\u0BC8",
+    crisis_report_label: "\u0B85\u0BB5\u0B9A\u0BB0\u0BAE\u0BCD \u0BA4\u0BC6\u0BB0\u0BBF\u0BB5\u0BBF",
   }
 };
+
+// ── Emergency categories for Crisis / Disaster Response Mode ──────────────
+export const CRISIS_CATEGORIES = [
+  'Trapped Person',
+  'Flooded Road',
+  'Downed Power Line',
+  'Structural Collapse',
+  'Gas Leak',
+  'Missing Person',
+  'Medical Emergency',
+  'Fire Hazard',
+  'Landslide / Debris',
+  'Contaminated Water Supply',
+];
+
+// ── Normal day-to-day categories ────────────────────────────────────────────
+export const NORMAL_CATEGORIES = [
+  'Pothole',
+  'Street Light',
+  'Drainage / Sewage',
+  'Water Supply',
+  'Garbage',
+  'Graffiti',
+  'Road Damage',
+  'Tree Fallen',
+  'Stray Animal',
+  'Noise Complaint',
+  'Other',
+];
 
 export const MOCK_EMPLOYEES = [
   { id: 'staff-employee-001', name: 'Sowmiya Narayanan', email: 'employee@civicresolve.in', specialty: 'Road & Drainage' },

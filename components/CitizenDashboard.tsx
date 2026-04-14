@@ -1,9 +1,11 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Role, User, Language, Complaint, ComplaintStatus, Priority } from '../types';
-import { TRANSLATIONS, STATUS_COLORS } from '../constants';
+import { Role, User, Language, Complaint, ComplaintStatus, Priority, DisasterResource } from '../types';
+import { TRANSLATIONS, STATUS_COLORS, CRISIS_CATEGORIES } from '../constants';
 import MapComponent from './MapComponent';
 import { analyzeComplaint, findDuplicateIncident, extractVoiceReport } from '../services/geminiService';
 import { calculateDistance } from '../utils/geoUtils';
+import { getResources, subscribeToResources } from '../services/disasterResourceService';
+import { RESOURCE_CONFIG } from './DisasterMap';
 import ChatBot from './ChatBot';
 import { formatDuration } from '../utils/timeUtils';
 import CivicRewardsTab from './CivicRewardsTab';
@@ -17,10 +19,11 @@ interface Props {
     addComplaint: (c: Complaint) => void;
     submitFeedback: (complaintId: string, rating: number, comments?: string) => void;
     updateUserAvatar: (avatarData: string) => void;
+    crisisMode: boolean;
     onLogout: () => void;
 }
 
-const CitizenDashboard: React.FC<Props> = ({ user, lang, setLang, complaints, addComplaint, submitFeedback, updateUserAvatar, onLogout }) => {
+const CitizenDashboard: React.FC<Props> = ({ user, lang, setLang, complaints, addComplaint, submitFeedback, updateUserAvatar, crisisMode, onLogout }) => {
     const [view, setView] = useState<'report' | 'list' | 'rewards'>('report');
     const [title, setTitle] = useState('');
     const [desc, setDesc] = useState('');
@@ -45,6 +48,11 @@ const CitizenDashboard: React.FC<Props> = ({ user, lang, setLang, complaints, ad
     const [newBadgeToast, setNewBadgeToast] = useState<string | null>(null);
     const prevEarnedBadgesRef = useRef<Set<string>>(new Set());
 
+    // ── Danger zone proximity alert ───────────────────────────────────────────
+    const [dangerToast, setDangerToast] = useState<string | null>(null);
+    const [disasterResources, setDisasterResources] = useState<DisasterResource[]>([]);
+    const [showSafetyPanel, setShowSafetyPanel] = useState(false);
+
     useEffect(() => {
         const profile = computeRewards(complaints);
         const currentEarned = new Set(profile.badges.filter(b => b.earned).map(b => b.id));
@@ -61,6 +69,34 @@ const CitizenDashboard: React.FC<Props> = ({ user, lang, setLang, complaints, ad
         }
         prevEarnedBadgesRef.current = currentEarned;
     }, [complaints]);
+
+    // ── Subscribe to disaster resources ──────────────────────────────────────
+    useEffect(() => {
+        const unsub = subscribeToResources(setDisasterResources);
+        return unsub;
+    }, []);
+
+    // ── Danger-zone proximity check (crisis mode only) ────────────────────────
+    useEffect(() => {
+        if (!crisisMode || disasterResources.length === 0) return;
+        const DANGER_RADIUS_M = 500;
+        const dangerZones = disasterResources.filter(r => r.type === 'danger_zone');
+        const nearby = dangerZones.filter(r =>
+            calculateDistance(location.lat, location.lng, r.location.lat, r.location.lng) <= DANGER_RADIUS_M
+        );
+        if (nearby.length > 0) {
+            const closest = nearby[0];
+            setDangerToast(`⚠️ You are within 500m of a danger zone: "${closest.name}". Move to safety immediately.`);
+        } else {
+            setDangerToast(null);
+        }
+    }, [crisisMode, disasterResources, location]);
+
+    // ── Safe zones sorted by distance ─────────────────────────────────────────
+    const nearbySafeZones = disasterResources
+        .filter(r => r.type === 'safe_zone' && r.status === 'Available')
+        .map(r => ({ ...r, distanceM: calculateDistance(location.lat, location.lng, r.location.lat, r.location.lng) }))
+        .sort((a, b) => a.distanceM - b.distanceM);
     
     // ── Voice Input logic ────────────────────────────────────────────────────
     const recognitionRef = useRef<any>(null);
@@ -326,7 +362,7 @@ const CitizenDashboard: React.FC<Props> = ({ user, lang, setLang, complaints, ad
     };
 
     return (
-        <div className="citizen-bg pb-24">
+        <div className={crisisMode ? 'citizen-bg-crisis pb-24' : 'citizen-bg pb-24'}>
             {/* ── New Badge Toast ── */}
             {newBadgeToast && (
                 <div className="fixed top-4 left-1/2 -translate-x-1/2 z-[9999] animate-bounce-in">
@@ -340,8 +376,68 @@ const CitizenDashboard: React.FC<Props> = ({ user, lang, setLang, complaints, ad
                 </div>
             )}
 
+            {/* ── Danger Zone Proximity Toast ── */}
+            {dangerToast && crisisMode && (
+                <div className="fixed top-4 left-1/2 -translate-x-1/2 z-[9998] animate-bounce-in w-[92vw] max-w-sm">
+                    <div className="flex items-start gap-3 bg-red-900 text-white px-4 py-3 rounded-2xl shadow-2xl border border-red-500/70 text-sm font-semibold backdrop-blur-md danger-zone-toast">
+                        <i className="fas fa-triangle-exclamation text-red-300 text-xl flex-shrink-0 mt-0.5 danger-pulse-icon"></i>
+                        <span className="flex-1 text-red-100 leading-snug text-xs">{dangerToast}</span>
+                        <button onClick={() => setDangerToast(null)} className="text-red-400 hover:text-white ml-1 flex-shrink-0">
+                            <i className="fas fa-xmark"></i>
+                        </button>
+                    </div>
+                </div>
+            )}
+
+            {/* ── Find Safety Panel ── */}
+            {showSafetyPanel && crisisMode && (
+                <div className="fixed inset-0 z-[9997] flex items-end justify-center" onClick={() => setShowSafetyPanel(false)}>
+                    <div className="w-full max-w-lg bg-slate-900 border-t border-red-900/60 rounded-t-3xl p-5 pb-8 shadow-2xl max-h-[70vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+                        <div className="flex items-center justify-between mb-4">
+                            <div className="flex items-center gap-2">
+                                <div className="w-8 h-8 rounded-xl bg-emerald-700/50 flex items-center justify-center">
+                                    <i className="fas fa-shield-heart text-emerald-300 text-sm"></i>
+                                </div>
+                                <div>
+                                    <p className="font-bold text-white text-sm" style={{ fontFamily: 'Space Grotesk' }}>Nearest Safe Zones</p>
+                                    <p className="text-[11px] text-slate-400">Sorted by distance from your location</p>
+                                </div>
+                            </div>
+                            <button onClick={() => setShowSafetyPanel(false)} className="w-8 h-8 rounded-full bg-slate-700 text-slate-300 hover:bg-slate-600 flex items-center justify-center">
+                                <i className="fas fa-xmark text-xs"></i>
+                            </button>
+                        </div>
+                        {nearbySafeZones.length === 0 ? (
+                            <div className="text-center py-10 text-slate-400">
+                                <i className="fas fa-map-marked-alt text-3xl block mb-2 text-slate-600"></i>
+                                <p className="text-sm">No safe zones have been marked yet.</p>
+                                <p className="text-xs text-slate-500 mt-1">Contact authorities for evacuation assistance.</p>
+                            </div>
+                        ) : nearbySafeZones.map(r => (
+                            <div key={r.id} className="find-safety-card">
+                                <div className="find-safety-icon">
+                                    <i className="fas fa-shield-heart"></i>
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                    <p className="font-bold text-white text-sm truncate">{r.name}</p>
+                                    {r.description && <p className="text-xs text-slate-400 line-clamp-1">{r.description}</p>}
+                                    <div className="flex items-center gap-3 mt-1">
+                                        <span className="text-[11px] text-emerald-300 font-bold">
+                                            <i className="fas fa-location-arrow mr-1"></i>
+                                            {r.distanceM < 1000 ? `${Math.round(r.distanceM)}m away` : `${(r.distanceM / 1000).toFixed(1)}km away`}
+                                        </span>
+                                        {r.capacity && <span className="text-[11px] text-slate-400"><i className="fas fa-users mr-1"></i>Cap: {r.capacity}</span>}
+                                    </div>
+                                </div>
+                                <span className="resource-status-badge resource-status-available">Available</span>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            )}
+
             {/* ── Header ── */}
-            <header className="dash-header dash-header-citizen">
+            <header className={`dash-header ${crisisMode ? 'dash-header-crisis' : 'dash-header-citizen'}`}>
                 <div className="flex items-center gap-3">
                     <label className="relative cursor-pointer group">
                         <div className="w-10 h-10 shadow-sm rounded-full bg-indigo-100 border border-indigo-200 overflow-hidden flex items-center justify-center flex-shrink-0">
@@ -358,8 +454,10 @@ const CitizenDashboard: React.FC<Props> = ({ user, lang, setLang, complaints, ad
                     </label>
                     <div>
                         <h1 style={{ fontFamily: 'Space Grotesk', letterSpacing: '-0.02em' }}>
-                            <i className="fas fa-leaf mr-2 opacity-90" />
-                            {t.app_name}
+                            {crisisMode
+                                ? <><i className="fas fa-shield-virus mr-2 opacity-90" />🚨 {t.crisis_banner_title}</>
+                                : <><i className="fas fa-leaf mr-2 opacity-90" />{t.app_name}</>
+                            }
                         </h1>
                         <div className="citizen-greeting mt-1" style={{ display: 'inline-flex' }}>
                             <span>{user.name}</span>
@@ -397,11 +495,41 @@ const CitizenDashboard: React.FC<Props> = ({ user, lang, setLang, complaints, ad
                     <CivicRewardsTab complaints={complaints} userName={user.name} />
                 ) : view === 'report' ? (
                     <div className="fade-in-up space-y-4">
+                        {/* Crisis Banner */}
+                        {crisisMode && (
+                            <div className="crisis-banner">
+                                <div className="crisis-banner-icon">🚨</div>
+                                <div className="flex-1">
+                                    <p className="crisis-banner-title">{t.crisis_banner_title}</p>
+                                    <p className="crisis-banner-desc">{t.crisis_banner_desc}</p>
+                                    <button
+                                        onClick={() => setShowSafetyPanel(true)}
+                                        className="find-safety-btn mt-3"
+                                    >
+                                        <i className="fas fa-shield-heart mr-1.5"></i>
+                                        Find Safety
+                                        {nearbySafeZones.length > 0 && (
+                                            <span className="ml-1.5 bg-white/20 text-[10px] px-2 py-0.5 rounded-full font-bold">{nearbySafeZones.length}</span>
+                                        )}
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+
                         {/* Section title & Voice Mic Feature */}
                         <div className="flex items-center justify-between">
-                            <div className="citizen-section-title">
-                                <span className="title-icon"><i className="fas fa-circle-plus" /></span>
-                                {t.report_complaint}
+                            <div className={crisisMode ? 'flex items-center gap-3' : 'citizen-section-title'}>
+                                {crisisMode ? (
+                                    <>
+                                        <span className="w-9 h-9 rounded-xl bg-red-600 flex items-center justify-center text-white text-sm flex-shrink-0"><i className="fas fa-triangle-exclamation" /></span>
+                                        <span className="font-extrabold text-red-800 text-lg" style={{ fontFamily: 'Space Grotesk' }}>{t.crisis_report_label}</span>
+                                    </>
+                                ) : (
+                                    <>
+                                        <span className="title-icon"><i className="fas fa-circle-plus" /></span>
+                                        {t.report_complaint}
+                                    </>
+                                )}
                             </div>
                             
                             <button 
@@ -428,29 +556,51 @@ const CitizenDashboard: React.FC<Props> = ({ user, lang, setLang, complaints, ad
                             </div>
                         )}
 
-                        {/* ─── STEP 1: Title ─── */}
-                        <div className="citizen-form-section space-y-3">
+                        {/* ─── STEP 1: Title / Emergency Type ─── */}
+                        <div className={crisisMode ? 'citizen-form-section-crisis space-y-3' : 'citizen-form-section space-y-3'}>
                             <div className="flex items-center gap-3 mb-2">
-                                <span className="citizen-step">1</span>
-                                <span className="font-semibold text-slate-700 text-sm">{t.complaint_title}</span>
+                                <span className={`w-[26px] h-[26px] rounded-full flex items-center justify-center text-white text-[12px] font-bold flex-shrink-0 ${
+                                    crisisMode ? 'bg-red-600' : 'bg-green-600'
+                                }`}>1</span>
+                                <span className="font-semibold text-slate-700 text-sm">
+                                    {crisisMode ? t.crisis_category_label : t.complaint_title}
+                                </span>
                             </div>
-                            <input
-                                className="citizen-input"
-                                placeholder={t.complaint_title_placeholder}
-                                value={title}
-                                onChange={e => setTitle(e.target.value)}
-                            />
+                            {crisisMode ? (
+                                <div className="relative">
+                                    <select
+                                        className="crisis-select"
+                                        value={title}
+                                        onChange={e => setTitle(e.target.value)}
+                                    >
+                                        <option value="">Select emergency type…</option>
+                                        {CRISIS_CATEGORIES.map(cat => (
+                                            <option key={cat} value={cat}>{cat}</option>
+                                        ))}
+                                    </select>
+                                    <i className="fas fa-chevron-down absolute right-4 top-1/2 -translate-y-1/2 text-red-400 pointer-events-none text-xs"></i>
+                                </div>
+                            ) : (
+                                <input
+                                    className="citizen-input"
+                                    placeholder={t.complaint_title_placeholder}
+                                    value={title}
+                                    onChange={e => setTitle(e.target.value)}
+                                />
+                            )}
                         </div>
 
                         {/* ─── STEP 2: Description ─── */}
-                        <div className="citizen-form-section space-y-3">
+                        <div className={crisisMode ? 'citizen-form-section-crisis space-y-3' : 'citizen-form-section space-y-3'}>
                             <div className="flex items-center gap-3 mb-2">
-                                <span className="citizen-step">2</span>
+                                <span className={`w-[26px] h-[26px] rounded-full flex items-center justify-center text-white text-[12px] font-bold flex-shrink-0 ${
+                                    crisisMode ? 'bg-red-600' : 'bg-green-600'
+                                }`}>2</span>
                                 <span className="font-semibold text-slate-700 text-sm">{t.description}</span>
                             </div>
                             <textarea
-                                className="citizen-input min-h-[90px] resize-y"
-                                placeholder={t.description_placeholder}
+                                className={crisisMode ? 'crisis-select min-h-[90px] resize-y' : 'citizen-input min-h-[90px] resize-y'}
+                                placeholder={crisisMode ? 'Describe the emergency situation in detail…' : t.description_placeholder}
                                 value={desc}
                                 onChange={e => setDesc(e.target.value)}
                             />
@@ -637,7 +787,7 @@ const CitizenDashboard: React.FC<Props> = ({ user, lang, setLang, complaints, ad
                         <button
                             onClick={handleSubmit}
                             disabled={isAnalyzing || !title.trim() || !desc.trim()}
-                            className="btn-citizen"
+                            className={crisisMode ? 'btn-crisis' : 'btn-citizen'}
                         >
                             {isAnalyzing
                                 ? <span className="flex items-center justify-center gap-2"><span className="spinner" />{t.analyzing}</span>
@@ -793,7 +943,7 @@ const CitizenDashboard: React.FC<Props> = ({ user, lang, setLang, complaints, ad
             </main>
 
             {/* Bottom Nav — green active */}
-            <div className="bottom-nav citizen-bottom-nav">
+            <div className="bottom-nav ${crisisMode ? 'crisis-bottom-nav' : 'citizen-bottom-nav'}">
                 <button onClick={() => setView('report')} className={view === 'report' ? 'active' : ''}>
                     <i className="fas fa-circle-plus text-xl" />
                     <span>{t.report_complaint}</span>
@@ -801,6 +951,13 @@ const CitizenDashboard: React.FC<Props> = ({ user, lang, setLang, complaints, ad
                 <button onClick={() => setView('list')} className={view === 'list' ? 'active' : ''}>
                     <i className="fas fa-list-check text-xl" />
                     <span>{t.my_complaints}</span>
+                </button>
+                <button
+                    onClick={() => window.location.hash = '#/community'}
+                    style={{ color: '#818cf8' }}
+                >
+                    <i className="fas fa-people-group text-xl" />
+                    <span>Community</span>
                 </button>
                 <button onClick={() => setView('rewards')} className={view === 'rewards' ? 'active' : ''}
                     style={view === 'rewards' ? { color: '#f59e0b' } : {}}>
@@ -815,3 +972,4 @@ const CitizenDashboard: React.FC<Props> = ({ user, lang, setLang, complaints, ad
 };
 
 export default CitizenDashboard;
+

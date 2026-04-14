@@ -93,3 +93,58 @@ export interface TrackingLog {
   coords: Location;
   timestamp: number;
 }
+// --- Disaster Resource & Safety Mapping ---
+export type ResourceType =
+  | 'safe_zone'
+  | 'rescue_point'
+  | 'danger_zone'
+  | 'food_center'
+  | 'water_supply'
+  | 'medical_camp';
+
+export type ResourceStatus =
+  | 'Available'
+  | 'Low'
+  | 'Out of Stock'
+  | 'Unsafe'
+  | 'Full'
+  | 'Active';
+
+export interface DisasterResource {
+  id: string;
+  type: ResourceType;
+  name: string;
+  description?: string;
+  location: Location;
+  status: ResourceStatus;
+  capacity?: number;
+  createdAt: number;
+  updatedAt: number;
+}
+
+// --- Community Hub ---
+export type PostTag = 'discussion' | 'photo' | 'update' | 'alert' | 'appreciation';
+
+export interface PostComment {
+  id: string;
+  authorId: string;
+  authorName: string;
+  authorAvatar?: string;
+  text: string;
+  createdAt: number;
+}
+
+export interface CommunityPost {
+  id: string;
+  authorId: string;
+  authorName: string;
+  authorRole: Role;
+  authorAvatar?: string;
+  content: string;
+  image?: string;
+  tag: PostTag;
+  likes: string[];       // user IDs
+  comments: PostComment[];
+  createdAt: number;
+}
+

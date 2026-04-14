@@ -5,7 +5,7 @@ import MapComponent from './MapComponent';
 import { verifyResolution } from '../services/geminiService';
 
 interface Props {
-    user: { id: string; name: string };
+    user: { id: string; name: string; avatar?: string };
     lang: Language;
     setLang: (l: Language) => void;
     complaints: Complaint[];
@@ -13,10 +13,11 @@ interface Props {
     updateLocation: (id: string, loc: Location) => void;
     completeTask: (id: string, proofImage: string, aiVerification?: { isResolved: boolean; reason: string }) => void;
     updateUserAvatar: (avatarData: string) => void;
+    crisisMode: boolean;
     onLogout: () => void;
 }
 
-const EmployeeDashboard: React.FC<Props> = ({ user, lang, setLang, complaints, updateStatus, updateLocation, completeTask, updateUserAvatar, onLogout }) => {
+const EmployeeDashboard: React.FC<Props> = ({ user, lang, setLang, complaints, updateStatus, updateLocation, completeTask, updateUserAvatar, crisisMode, onLogout }) => {
     const [activeTask, setActiveTask] = useState<string | null>(null);
     const [currentLocation, setCurrentLocation] = useState<Location>({ lat: 12.975, lng: 80.25 });
     const [proofImage, setProofImage] = useState<string | null>(null);
@@ -139,12 +140,12 @@ const EmployeeDashboard: React.FC<Props> = ({ user, lang, setLang, complaints, u
     };
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-slate-50 to-emerald-50">
+        <div className={`min-h-screen ${crisisMode ? 'bg-zinc-950' : 'bg-gradient-to-br from-slate-50 to-emerald-50'}`}>
             {/* Offline Banner */}
             {!isOnline && <div className="offline-banner">{t.offline_banner}</div>}
 
             {/* Header */}
-            <header className="dash-header dash-header-employee">
+            <header className={`dash-header ${crisisMode ? 'dash-header-crisis' : 'dash-header-employee'}`}>
                 <div className="flex items-center gap-3">
                     <label className="relative cursor-pointer group">
                         <div className="w-10 h-10 shadow-sm rounded-full bg-emerald-100 border border-emerald-200 overflow-hidden flex items-center justify-center flex-shrink-0">
@@ -161,12 +162,23 @@ const EmployeeDashboard: React.FC<Props> = ({ user, lang, setLang, complaints, u
                     </label>
                     <div>
                         <h1 style={{ fontFamily: 'Space Grotesk' }}>
-                            <i className="fas fa-hard-hat mr-2 text-emerald-300"></i>{t.workforce_app}
+                            {crisisMode
+                                ? <><i className="fas fa-shield-virus mr-2 text-red-300"></i>Crisis Response</>
+                                : <><i className="fas fa-hard-hat mr-2 text-emerald-300"></i>{t.workforce_app}</>
+                            }
                         </h1>
                         <p className="text-xs text-emerald-200 mt-0.5">{user.name}</p>
                     </div>
                 </div>
                 <div className="flex items-center gap-2">
+                    <button
+                        onClick={() => window.location.hash = '#/community'}
+                        className="text-white/90 hover:text-white text-[15px] font-medium transition-colors border border-white/20 bg-black/10 hover:bg-black/20 px-3 py-1.5 rounded-full mr-1"
+                        title="Community Hub"
+                    >
+                        <i className="fas fa-people-group mr-1.5" />
+                        <span className="text-xs">Community</span>
+                    </button>
                     <button
                         onClick={() => window.location.hash = '#/about'}
                         className="text-white/90 hover:text-white text-[15px] font-medium transition-colors border border-white/20 bg-black/10 hover:bg-black/20 px-3 py-1.5 rounded-full mr-1"
@@ -305,8 +317,8 @@ const EmployeeDashboard: React.FC<Props> = ({ user, lang, setLang, complaints, u
                 /* ---- TASK LIST ---- */
                 <div className="p-4 space-y-4 max-w-lg mx-auto">
                     <div className="flex items-center justify-between">
-                        <h2 className="font-bold text-slate-700" style={{ fontFamily: 'Space Grotesk' }}>
-                            {t.active_tasks} ({assignedComplaints.length})
+                        <h2 className={`font-bold ${crisisMode ? 'text-red-300' : 'text-slate-700'}`} style={{ fontFamily: 'Space Grotesk' }}>
+                            {crisisMode ? '🚨 Emergency Tasks' : t.active_tasks} ({assignedComplaints.length})
                         </h2>
                         <span className={`text-xs px-2.5 py-1.5 rounded-full font-semibold ${isOnline ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'}`}>
                             <i className={`fas fa-circle text-[8px] mr-1 ${isOnline ? 'text-emerald-500' : 'text-red-500'}`}></i>
@@ -323,28 +335,35 @@ const EmployeeDashboard: React.FC<Props> = ({ user, lang, setLang, complaints, u
                     )}
 
                     {assignedComplaints.map(c => (
-                        <div key={c.id} className="task-card fade-in-up" style={{
+                        <div key={c.id} className={crisisMode ? 'task-card-crisis fade-in-up' : 'task-card fade-in-up'} style={crisisMode ? undefined : {
                             '--tw-border-left-color': c.priority === Priority.EMERGENCY ? '#dc2626' : c.priority === 'High' ? '#ea580c' : '#059669'
                         } as React.CSSProperties}>
                             <div className="flex justify-between items-start mb-2">
                                 <div className="flex-1 pr-3">
-                                    <h3 className="font-bold text-slate-800">{c.title}</h3>
-                                    <p className="text-xs text-slate-500 mt-0.5">{c.category}</p>
+                                    <h3 className={`font-bold ${crisisMode ? 'text-red-200' : 'text-slate-800'}`}>{c.title}</h3>
+                                    <p className={`text-xs mt-0.5 ${crisisMode ? 'text-red-400/70' : 'text-slate-500'}`}>{c.category}</p>
                                 </div>
-                                <span className={`badge ${c.priority === 'Emergency' ? 'badge-emergency' : c.priority === 'High' ? 'badge-high' : c.priority === 'Medium' ? 'badge-medium' : 'badge-low'}`}>
-                                    {c.priority}
-                                </span>
+                                <div className="flex flex-col items-end gap-1">
+                                    <span className={`badge ${c.priority === 'Emergency' ? 'badge-emergency' : c.priority === 'High' ? 'badge-high' : c.priority === 'Medium' ? 'badge-medium' : 'badge-low'}`}>
+                                        {c.priority}
+                                    </span>
+                                    {crisisMode && <span className="crisis-task-badge"><i className="fas fa-triangle-exclamation"></i>CRISIS</span>}
+                                </div>
                             </div>
-                            <p className="text-sm text-slate-500 mb-3 line-clamp-2">{c.description}</p>
+                            <p className={`text-sm mb-3 line-clamp-2 ${crisisMode ? 'text-red-300/70' : 'text-slate-500'}`}>{c.description}</p>
                             <div className="flex items-center justify-between">
-                                <span className="text-xs text-slate-400">
-                                    <i className="fas fa-map-marker-alt mr-1 text-red-400"></i>
+                                <span className={`text-xs ${crisisMode ? 'text-red-400/60' : 'text-slate-400'}`}>
+                                    <i className={`fas fa-map-marker-alt mr-1 ${crisisMode ? 'text-red-500' : 'text-red-400'}`}></i>
                                     {c.location.lat.toFixed(4)}, {c.location.lng.toFixed(4)}
                                 </span>
                                 <button
                                     onClick={() => { setActiveTask(c.id); updateStatus(c.id, ComplaintStatus.ON_THE_WAY); setTaskStatus(ComplaintStatus.ON_THE_WAY); }}
-                                    className="flex items-center gap-1.5 bg-emerald-600 text-white px-4 py-2 rounded-xl text-sm font-bold hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-200">
-                                    <i className="fas fa-play"></i> {t.start_task}
+                                    className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-bold transition-all shadow-lg ${
+                                        crisisMode
+                                            ? 'bg-red-700 hover:bg-red-600 text-white shadow-red-900'
+                                            : 'bg-emerald-600 text-white hover:bg-emerald-700 shadow-emerald-200'
+                                    }`}>
+                                    <i className="fas fa-play"></i> {crisisMode ? 'Respond' : t.start_task}
                                 </button>
                             </div>
                         </div>

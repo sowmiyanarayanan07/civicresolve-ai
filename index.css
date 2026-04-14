@@ -724,3 +724,517 @@ html, body, #root { min-height: 100dvh; }
   backdrop-filter: blur(6px);
   border: 1px solid rgba(255,255,255,0.25);
 }
+
+/* ======================================================
+   CRISIS MODE � Disaster Response UI
+   ====================================================== */
+
+/* Add crisis variables to :root via cascade */
+.crisis-vars {
+  --crisis-primary:    #dc2626;
+  --crisis-deep:       #991b1b;
+  --crisis-dark:       #450a0a;
+  --crisis-glow:       rgba(220,38,38,0.35);
+  --crisis-border:     rgba(239,68,68,0.50);
+  --crisis-text:       #fca5a5;
+}
+
+/* @keyframes */
+@keyframes crisis-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(220,38,38,0); }
+  50%       { box-shadow: 0 0 0 8px rgba(220,38,38,0.28); }
+}
+@keyframes crisis-blink {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.45; }
+}
+@keyframes crisis-slide-in {
+  from { opacity: 0; transform: translateY(-12px) scale(0.97); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+@keyframes siren-sweep {
+  0%   { background-position: 0% 50%; }
+  50%  { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+@keyframes animate-bounce-in {
+  0%   { opacity: 0; transform: translateX(-50%) scale(0.8) translateY(-10px); }
+  70%  { transform: translateX(-50%) scale(1.05) translateY(2px); }
+  100% { opacity: 1; transform: translateX(-50%) scale(1) translateY(0); }
+}
+.animate-bounce-in { animation: animate-bounce-in 0.45s cubic-bezier(0.34,1.56,0.64,1) both; }
+
+/* Body override when crisis active */
+body.crisis-active { --civic-primary: #dc2626; --civic-primary-d: #991b1b; --civic-accent: #ef4444; }
+
+/* Admin sidebar crisis bar */
+.crisis-sidebar-bar {
+  width: 100%;
+  padding: 10px 14px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #7f1d1d, #991b1b, #dc2626, #991b1b, #7f1d1d);
+  background-size: 300% 300%;
+  animation: siren-sweep 2.5s ease infinite;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #fca5a5;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  border: 1px solid rgba(239,68,68,0.40);
+}
+.crisis-sidebar-bar i { animation: crisis-blink 0.8s ease-in-out infinite; color: #fca5a5; font-size: 14px; }
+
+/* Crisis toggle wrapper */
+.crisis-toggle-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 14px;
+  border-radius: 14px;
+  border: 1px solid rgba(239,68,68,0.30);
+  background: rgba(220,38,38,0.08);
+  cursor: pointer;
+  transition: all 0.25s;
+  gap: 10px;
+}
+.crisis-toggle-wrap:hover { background: rgba(220,38,38,0.14); border-color: rgba(239,68,68,0.50); }
+.crisis-toggle-wrap.active { background: rgba(220,38,38,0.18); border-color: rgba(239,68,68,0.60); animation: crisis-pulse 2s ease-in-out infinite; }
+
+/* Toggle switch track */
+.crisis-toggle-switch { position: relative; width: 44px; height: 24px; flex-shrink: 0; }
+.crisis-toggle-switch input { opacity: 0; width: 0; height: 0; position: absolute; }
+.crisis-toggle-track {
+  position: absolute; inset: 0; border-radius: 999px;
+  background: #374151; transition: background 0.3s; cursor: pointer;
+}
+.crisis-toggle-switch input:checked + .crisis-toggle-track { background: #dc2626; }
+.crisis-toggle-track::before {
+  content: ''; position: absolute;
+  width: 18px; height: 18px; left: 3px; top: 3px;
+  border-radius: 50%; background: white;
+  transition: transform 0.3s cubic-bezier(0.4,0,0.2,1);
+  box-shadow: 0 2px 4px rgba(0,0,0,0.25);
+}
+.crisis-toggle-switch input:checked + .crisis-toggle-track::before { transform: translateX(20px); }
+
+/* Crisis banner */
+.crisis-banner {
+  animation: crisis-slide-in 0.4s ease both;
+  background: linear-gradient(135deg, #7f1d1d 0%, #991b1b 40%, #b91c1c 100%);
+  border: 1px solid rgba(239,68,68,0.55);
+  border-radius: 16px;
+  padding: 16px 18px;
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+}
+.crisis-banner-icon {
+  width: 42px; height: 42px; border-radius: 12px;
+  background: rgba(239,68,68,0.30); border: 1px solid rgba(239,68,68,0.50);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 20px; flex-shrink: 0;
+  animation: crisis-blink 1.2s ease infinite;
+}
+.crisis-banner-title {
+  font-family: var(--font-heading); font-size: 13px; font-weight: 900;
+  letter-spacing: 0.08em; color: #fca5a5; text-transform: uppercase; margin-bottom: 4px;
+}
+.crisis-banner-desc { font-size: 12px; color: rgba(252,165,165,0.80); line-height: 1.5; }
+
+/* Crisis task badge */
+.crisis-task-badge {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 4px 10px; border-radius: 999px;
+  background: #7f1d1d; border: 1px solid rgba(239,68,68,0.60);
+  color: #fca5a5; font-size: 10px; font-weight: 800;
+  letter-spacing: 0.08em; text-transform: uppercase;
+  animation: crisis-pulse 1.8s ease-in-out infinite;
+}
+
+/* Crisis dashboard header */
+.dash-header-crisis {
+  background: linear-gradient(135deg, #450a0a 0%, #7f1d1d 40%, #991b1b 70%, #dc2626 100%);
+  box-shadow: 0 4px 24px rgba(220,38,38,0.45);
+}
+
+/* Crisis citizen background */
+.citizen-bg-crisis {
+  background: linear-gradient(160deg, #fff1f2 0%, #ffe4e6 40%, #fff1f2 100%);
+  min-height: 100dvh;
+}
+
+/* Crisis form section */
+.citizen-form-section-crisis {
+  background: white; border-radius: 18px; padding: 20px;
+  border: 1.5px solid #fecaca; box-shadow: 0 4px 16px rgba(220,38,38,0.08);
+  transition: var(--transition);
+}
+.citizen-form-section-crisis:hover { border-color: #f87171; box-shadow: 0 6px 20px rgba(220,38,38,0.14); }
+
+/* Crisis select */
+.crisis-select {
+  width: 100%; border: 2px solid #fca5a5; border-radius: 12px;
+  padding: 12px 16px; font-size: 14px; font-family: var(--font-body);
+  font-weight: 600; color: #991b1b; background: #fff1f2;
+  transition: var(--transition); outline: none; appearance: none; -webkit-appearance: none; cursor: pointer;
+}
+.crisis-select:focus { border-color: #dc2626; background: #ffffff; box-shadow: 0 0 0 3px rgba(220,38,38,0.16); }
+
+/* Crisis submit button */
+.btn-crisis {
+  width: 100%; padding: 14px 24px;
+  background: linear-gradient(135deg, #991b1b 0%, #dc2626 50%, #ef4444 100%);
+  color: white; font-family: var(--font-body); font-weight: 700; font-size: 15px;
+  letter-spacing: 0.03em; border: none; border-radius: 14px; cursor: pointer;
+  transition: var(--transition); box-shadow: 0 6px 20px rgba(220,38,38,0.40);
+  animation: crisis-pulse 2.5s ease-in-out infinite;
+}
+.btn-crisis:hover { transform: translateY(-2px); box-shadow: 0 12px 32px rgba(220,38,38,0.50); }
+.btn-crisis:disabled { opacity: 0.50; cursor: not-allowed; transform: none; animation: none; }
+
+/* Employee crisis task card */
+.task-card-crisis {
+  background: #1c0a0a; border-radius: 18px; padding: 18px;
+  border: 1px solid rgba(239,68,68,0.30); transition: var(--transition);
+  position: relative; overflow: hidden;
+}
+.task-card-crisis::before {
+  content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 4px;
+  background: linear-gradient(to bottom, #dc2626, #ef4444); border-radius: 4px 0 0 4px;
+}
+.task-card-crisis:hover { box-shadow: 0 0 0 2px rgba(239,68,68,0.40), 0 12px 32px rgba(220,38,38,0.20); transform: translateY(-2px); }
+
+/* Bottom nav crisis */
+.crisis-bottom-nav button.active { color: #ef4444; }
+.crisis-bottom-nav button.active i { filter: drop-shadow(0 2px 4px rgba(239,68,68,0.50)); }
+
+
+/* ======================================================
+   DISASTER RESOURCE MAP � marker, card, badge styles
+   ====================================================== */
+
+/* @keyframes for danger zone map markers */
+@keyframes danger-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(220,38,38,0); }
+  50%       { box-shadow: 0 0 0 10px rgba(220,38,38,0.35); }
+}
+
+/* Danger pulse icon used in citizen danger toast */
+.danger-pulse-icon {
+  animation: danger-pulse 1.4s ease-in-out infinite;
+  border-radius: 50%;
+}
+
+/* Danger zone toast card */
+.danger-zone-toast {
+  animation: crisis-slide-in 0.4s ease both;
+}
+
+/* Resource status badge chips */
+.resource-status-badge {
+  display: inline-flex;
+  align-items: center;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 9999px;
+  border: 1px solid transparent;
+  flex-shrink: 0;
+}
+.resource-status-available   { background: rgba(16,185,129,0.15);  color: #6ee7b7; border-color: rgba(16,185,129,0.30); }
+.resource-status-active      { background: rgba(59,130,246,0.15);  color: #93c5fd; border-color: rgba(59,130,246,0.30); }
+.resource-status-low         { background: rgba(245,158,11,0.15);  color: #fcd34d; border-color: rgba(245,158,11,0.30); }
+.resource-status-out         { background: rgba(220,38,38,0.15);   color: #fca5a5; border-color: rgba(220,38,38,0.30); }
+.resource-status-unsafe      { background: rgba(220,38,38,0.25);   color: #f87171; border-color: rgba(220,38,38,0.50); }
+.resource-status-full        { background: rgba(100,116,139,0.20); color: #94a3b8; border-color: rgba(100,116,139,0.30); }
+
+/* Find Safety button in crisis banner */
+.find-safety-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: rgba(16,185,129,0.25);
+  border: 1px solid rgba(16,185,129,0.50);
+  color: #6ee7b7;
+  font-size: 12px;
+  font-weight: 800;
+  padding: 6px 14px;
+  border-radius: 9999px;
+  cursor: pointer;
+  transition: all 0.2s;
+  letter-spacing: 0.02em;
+}
+.find-safety-btn:hover {
+  background: rgba(16,185,129,0.40);
+  border-color: rgba(16,185,129,0.70);
+  color: #fff;
+  box-shadow: 0 0 12px rgba(16,185,129,0.30);
+}
+
+/* Find Safety panel safe zone card */
+.find-safety-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: rgba(16,185,129,0.08);
+  border: 1px solid rgba(16,185,129,0.20);
+  border-radius: 14px;
+  padding: 12px 14px;
+  margin-bottom: 8px;
+  transition: all 0.2s;
+}
+.find-safety-card:hover {
+  background: rgba(16,185,129,0.14);
+  border-color: rgba(16,185,129,0.40);
+}
+.find-safety-icon {
+  width: 38px; height: 38px; border-radius: 12px;
+  background: rgba(16,185,129,0.20);
+  border: 1px solid rgba(16,185,129,0.35);
+  display: flex; align-items: center; justify-content: center;
+  color: #6ee7b7; font-size: 16px; flex-shrink: 0;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   COMMUNITY HUB
+   ═══════════════════════════════════════════════════════════ */
+
+/* Page background */
+.community-hub-bg {
+  min-height: 100dvh;
+  background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #0f172a 100%);
+  font-family: 'Inter', 'Space Grotesk', sans-serif;
+}
+
+/* Sticky header */
+.community-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 16px;
+  background: rgba(15, 23, 42, 0.85);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-bottom: 1px solid rgba(99, 102, 241, 0.18);
+  box-shadow: 0 4px 24px rgba(0,0,0,0.3);
+}
+
+/* New Post button */
+.community-compose-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 700;
+  padding: 8px 18px;
+  border-radius: 9999px;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s;
+  box-shadow: 0 4px 14px rgba(99,102,241,0.40);
+  letter-spacing: 0.01em;
+}
+.community-compose-btn:hover {
+  background: linear-gradient(135deg, #818cf8, #a78bfa);
+  box-shadow: 0 6px 20px rgba(99,102,241,0.55);
+  transform: translateY(-1px);
+}
+.community-compose-btn.active {
+  background: rgba(99,102,241,0.20);
+  border: 1px solid rgba(99,102,241,0.50);
+  box-shadow: none;
+  transform: none;
+}
+
+/* Glassmorphism post / compose card */
+.community-card {
+  background: rgba(30, 41, 59, 0.75);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(99, 102, 241, 0.15);
+  border-radius: 20px;
+  padding: 20px;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+.community-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 32px rgba(0,0,0,0.35), 0 0 0 1px rgba(99,102,241,0.18);
+}
+
+/* Compose textarea */
+.community-textarea {
+  width: 100%;
+  background: rgba(15, 23, 42, 0.70);
+  border: 1px solid rgba(99,102,241,0.25);
+  border-radius: 14px;
+  color: #e2e8f0;
+  font-size: 14px;
+  line-height: 1.6;
+  padding: 12px 14px;
+  resize: vertical;
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  font-family: inherit;
+}
+.community-textarea:focus {
+  border-color: rgba(99,102,241,0.60);
+  box-shadow: 0 0 0 3px rgba(99,102,241,0.12);
+}
+.community-textarea::placeholder { color: #475569; }
+
+/* Action button row */
+.community-action-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(99,102,241,0.12);
+  border: 1px solid rgba(99,102,241,0.25);
+  color: #a5b4fc;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 6px 14px;
+  border-radius: 9999px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.community-action-btn:hover {
+  background: rgba(99,102,241,0.22);
+  border-color: rgba(99,102,241,0.50);
+  color: #c7d2fe;
+}
+
+/* Tag select in compose */
+.community-tag-select {
+  appearance: none;
+  background: rgba(15, 23, 42, 0.80);
+  border: 1px solid rgba(99,102,241,0.25);
+  border-radius: 10px;
+  color: #c7d2fe;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 7px 32px 7px 12px;
+  outline: none;
+  cursor: pointer;
+  transition: border-color 0.2s;
+}
+.community-tag-select:focus { border-color: rgba(99,102,241,0.60); }
+
+/* Post submit button */
+.community-post-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 700;
+  padding: 8px 20px;
+  border-radius: 10px;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s;
+  box-shadow: 0 4px 12px rgba(99,102,241,0.35);
+  white-space: nowrap;
+}
+.community-post-btn:hover:not(:disabled) {
+  background: linear-gradient(135deg, #818cf8, #a78bfa);
+  box-shadow: 0 6px 18px rgba(99,102,241,0.50);
+  transform: translateY(-1px);
+}
+
+/* Filter tabs */
+.community-filter-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 14px;
+  border-radius: 9999px;
+  font-size: 12px;
+  font-weight: 600;
+  background: rgba(30, 41, 59, 0.70);
+  border: 1px solid rgba(71, 85, 105, 0.50);
+  color: #94a3b8;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+.community-filter-tab:hover {
+  background: rgba(71, 85, 105, 0.50);
+  color: #e2e8f0;
+  border-color: rgba(99,102,241,0.30);
+}
+.community-filter-tab.active-all {
+  background: rgba(99,102,241,0.20);
+  border-color: rgba(99,102,241,0.45);
+  color: #a5b4fc;
+}
+
+/* Post action buttons (like, comment, share) */
+.post-action-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 12px;
+  border-radius: 9999px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #64748b;
+  background: transparent;
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: all 0.18s;
+}
+.post-action-btn:hover {
+  background: rgba(71, 85, 105, 0.35);
+  color: #cbd5e1;
+  border-color: rgba(71, 85, 105, 0.50);
+}
+.post-action-btn.liked {
+  color: #f87171;
+  background: rgba(239,68,68,0.10);
+  border-color: rgba(239,68,68,0.25);
+}
+.post-action-btn.liked:hover {
+  background: rgba(239,68,68,0.18);
+}
+
+/* Tag chip on post cards */
+.post-tag-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  border: 1px solid;
+  border-radius: 9999px;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 3px 10px;
+  letter-spacing: 0.02em;
+}
+
+/* Comment input */
+.community-comment-input {
+  background: rgba(15, 23, 42, 0.80);
+  border: 1px solid rgba(71, 85, 105, 0.50);
+  border-radius: 9999px;
+  color: #e2e8f0;
+  font-size: 12px;
+  padding: 6px 14px;
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+.community-comment-input:focus {
+  border-color: rgba(99,102,241,0.55);
+  box-shadow: 0 0 0 2px rgba(99,102,241,0.12);
+}
+.community-comment-input::placeholder { color: #475569; }
+
+/* Empty state */
+.community-empty {
+  text-align: center;
+  padding: 64px 16px;
+}

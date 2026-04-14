@@ -3,6 +3,7 @@ import { Complaint, ComplaintStatus, Language, Priority } from '../types';
 import { TRANSLATIONS, MOCK_EMPLOYEES, PRIORITY_COLORS, STATUS_COLORS } from '../constants';
 import MapComponent from './MapComponent';
 import AnalyticsCharts from './AnalyticsCharts';
+import DisasterMap from './DisasterMap';
 import { getEmployees, addEmployee as dbAddEmployee, deleteEmployee as dbDeleteEmployee, Employee as DBEmployee, getAvailableEmployees } from '../services/dbService';
 import { formatDuration } from '../utils/timeUtils';
 
@@ -14,13 +15,16 @@ interface Props {
     adminVerify: (complaintId: string) => void;
     adminReject: (complaintId: string, reason: string) => void;
     clearAllComplaints: () => Promise<void>;
+    crisisMode: boolean;
+    setCrisisMode: (v: boolean) => void;
     onLogout: () => void;
 }
 
-const AdminDashboard: React.FC<Props> = ({ lang, setLang, complaints, assignEmployee, adminVerify, adminReject, clearAllComplaints, onLogout }) => {
+const AdminDashboard: React.FC<Props> = ({ lang, setLang, complaints, assignEmployee, adminVerify, adminReject, clearAllComplaints, crisisMode, setCrisisMode, onLogout }) => {
     const [selected, setSelected] = useState<Complaint | null>(null);
     const [tab, setTab] = useState<'new' | 'verify' | 'all' | 'employees' | 'critical' | 'resolved'>('all');
     const [rejectReason, setRejectReason] = useState('');
+    const [crisisView, setCrisisView] = useState<'map' | 'complaints'>('map');
     const t = TRANSLATIONS[lang];
 
     // Employee Management State
@@ -54,6 +58,14 @@ const AdminDashboard: React.FC<Props> = ({ lang, setLang, complaints, assignEmpl
             setLoadingEmployees(false);
         }
     };
+
+    // Sync selected complaint whenever the complaints list updates (e.g. realtime reassignment)
+    React.useEffect(() => {
+        if (selected) {
+            const updated = complaints.find(c => c.id === selected.id);
+            if (updated) setSelected(updated);
+        }
+    }, [complaints]);
 
     // When a complaint is selected, load available employees for reassign
     const handleSelectComplaint = async (c: Complaint) => {
@@ -164,6 +176,50 @@ const AdminDashboard: React.FC<Props> = ({ lang, setLang, complaints, assignEmpl
                         ))}
                     </div>
 
+                    {/* Crisis Mode Toggle */}
+                    <div className="mb-4">
+                        {crisisMode && (
+                            <div className="crisis-sidebar-bar mb-2">
+                                <i className="fas fa-triangle-exclamation"></i>
+                                <span>{t.crisis_mode_on}</span>
+                            </div>
+                        )}
+                        <div
+                            className={`crisis-toggle-wrap ${crisisMode ? 'active' : ''}`}
+                            onClick={() => {
+                                const msg = crisisMode ? t.crisis_deactivate_confirm : t.crisis_toggle_confirm;
+                                if (window.confirm(msg)) setCrisisMode(!crisisMode);
+                            }}
+                        >
+                            <div className="flex items-center gap-2 flex-1">
+                                <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${
+                                    crisisMode ? 'bg-red-700/50' : 'bg-slate-700/50'
+                                }`}>
+                                    <i className={`fas fa-shield-virus text-sm ${crisisMode ? 'text-red-300' : 'text-slate-400'}`}></i>
+                                </div>
+                                <div>
+                                    <p className={`text-xs font-bold ${crisisMode ? 'text-red-300' : 'text-slate-300'}`}>
+                                        {t.crisis_mode}
+                                    </p>
+                                    <p className="text-[10px] text-slate-500">
+                                        {crisisMode ? 'Emergency triage active' : 'Tap to activate'}
+                                    </p>
+                                </div>
+                            </div>
+                            <label className="crisis-toggle-switch" onClick={e => e.stopPropagation()}>
+                                <input
+                                    type="checkbox"
+                                    checked={crisisMode}
+                                    onChange={() => {
+                                        const msg = crisisMode ? t.crisis_deactivate_confirm : t.crisis_toggle_confirm;
+                                        if (window.confirm(msg)) setCrisisMode(!crisisMode);
+                                    }}
+                                />
+                                <span className="crisis-toggle-track"></span>
+                            </label>
+                        </div>
+                    </div>
+
                     {/* Heatmap Legend */}
                     <div className="rounded-xl border border-slate-700/50 p-3 bg-slate-800/50">
                         <p className="text-xs text-slate-400 uppercase tracking-wider mb-2">{t.priority_legend}</p>
@@ -199,6 +255,12 @@ const AdminDashboard: React.FC<Props> = ({ lang, setLang, complaints, assignEmpl
                     >
                         <i className="fas fa-hand-holding-heart mr-2"></i> About Us
                     </button>
+                    <button
+                        onClick={() => window.location.hash = '#/community'}
+                        className="w-full bg-violet-900/20 hover:bg-violet-900/40 text-violet-300 border border-violet-800/30 px-3 py-2 rounded-xl text-sm font-semibold transition-all mb-2"
+                    >
+                        <i className="fas fa-people-group mr-2"></i> Community Hub
+                    </button>
                     <div className="flex gap-2">
                         <button onClick={() => setLang(lang === 'en' ? 'ta' : 'en')} className="lang-toggle flex-1 text-center">
                             <i className="fas fa-language text-xs"></i>
@@ -212,7 +274,47 @@ const AdminDashboard: React.FC<Props> = ({ lang, setLang, complaints, assignEmpl
             </aside>
 
             {/* ---- MAIN CONTENT ---- */}
-            <main className="flex-1 flex flex-col overflow-hidden bg-slate-800">
+            <main className="flex-1 flex flex-col overflow-hidden bg-slate-800" style={{ minHeight: 0 }}>
+
+                {/* Crisis Mode view switcher */}
+                {crisisMode && (
+                    <div className="flex items-center gap-1 px-4 py-2 bg-zinc-950 border-b border-red-900/40 flex-shrink-0">
+                        <button
+                            onClick={() => setCrisisView('map')}
+                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                                crisisView === 'map'
+                                    ? 'bg-red-700 text-white shadow-lg shadow-red-900/40'
+                                    : 'text-slate-400 hover:text-white hover:bg-slate-800'
+                            }`}
+                        >
+                            <i className="fas fa-map-location-dot"></i> Crisis Map
+                        </button>
+                        <button
+                            onClick={() => setCrisisView('complaints')}
+                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                                crisisView === 'complaints'
+                                    ? 'bg-slate-600 text-white'
+                                    : 'text-slate-400 hover:text-white hover:bg-slate-800'
+                            }`}
+                        >
+                            <i className="fas fa-list-check"></i> Emergency Complaints
+                            <span className="ml-1 bg-red-700 text-white text-[9px] px-1.5 py-0.5 rounded-full font-bold">
+                                {complaints.filter(c => ['Emergency','High'].includes(c.priority)).length}
+                            </span>
+                        </button>
+                        <div className="ml-auto flex items-center gap-1.5">
+                            <span className="crisis-task-badge text-[9px]"><i className="fas fa-circle-dot mr-1 text-[8px]"></i>CRISIS ACTIVE</span>
+                        </div>
+                    </div>
+                )}
+
+                {/* Show DisasterMap when crisis mode + map view */}
+                {crisisMode && crisisView === 'map' ? (
+                    <div className="flex-1 overflow-hidden" style={{ minHeight: 0 }}>
+                        <DisasterMap />
+                    </div>
+                ) : (
+                <>
                 {/* Live Map */}
                 <div className="h-56 md:h-72 relative border-b border-slate-700/50 flex-shrink-0">
                     <MapComponent center={{ lat: 12.9716, lng: 80.2433 }} markers={mapMarkers} zoom={12} />
@@ -577,7 +679,7 @@ const AdminDashboard: React.FC<Props> = ({ lang, setLang, complaints, assignEmpl
                                                         <button key={emp.id}
                                                             onClick={() => {
                                                                 assignEmployee(selected.id, emp.id);
-                                                                setSelected(null);
+                                                                setSelected(prev => prev ? { ...prev, assignedTo: emp.id, status: ComplaintStatus.ASSIGNED } : null);
                                                                 setShowReassign(false);
                                                             }}
                                                             className="w-full flex items-center justify-between bg-slate-700/60 hover:bg-emerald-900/40 border border-slate-600 hover:border-emerald-500/50 px-4 py-3 rounded-xl transition-all">
@@ -615,7 +717,9 @@ const AdminDashboard: React.FC<Props> = ({ lang, setLang, complaints, assignEmpl
                             </div>
                         )}
                     </div>
-                </div>
+                    </div>
+                </>
+                )}
             </main>
         </div>
     );

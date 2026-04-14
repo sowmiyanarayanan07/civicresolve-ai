@@ -8,12 +8,29 @@ import CitizenDashboard from './components/CitizenDashboard';
 import EmployeeDashboard from './components/EmployeeDashboard';
 import AdminDashboard from './components/AdminDashboard';
 import AboutUs from './components/AboutUs';
+import CommunityHub from './components/CommunityHub';
 
 const App: React.FC = () => {
   const [user, setUser] = useState<User | null>(null);
   const [lang, setLang] = useState<Language>('en');
   const [complaints, setComplaints] = useState<Complaint[]>([]);
   const [authLoading, setAuthLoading] = useState(true);
+  const [crisisMode, setCrisisModeState] = useState<boolean>(() => {
+    try { return localStorage.getItem('civic_crisis_mode') === 'true'; } catch { return false; }
+  });
+
+  const setCrisisMode = (val: boolean) => {
+    setCrisisModeState(val);
+    try { localStorage.setItem('civic_crisis_mode', String(val)); } catch {}
+    // Apply/remove body class for global CSS hooks
+    if (val) document.body.classList.add('crisis-active');
+    else document.body.classList.remove('crisis-active');
+  };
+
+  // Sync body class on initial load
+  React.useEffect(() => {
+    if (crisisMode) document.body.classList.add('crisis-active');
+  }, []);
 
   // Restore session on mount
   useEffect(() => {
@@ -109,6 +126,15 @@ const App: React.FC = () => {
 
           <Route path="/about" element={<AboutUs />} />
 
+          {/* Community Hub — accessible to all logged-in users */}
+          <Route path="/community"
+            element={
+              user
+                ? <CommunityHub user={user} onBack={() => window.history.back()} />
+                : <Navigate to="/" />
+            }
+          />
+
           <Route path="/citizen"
             element={
               user?.role === Role.CITIZEN
@@ -122,6 +148,7 @@ const App: React.FC = () => {
                   addComplaint={addComplaint}
                   submitFeedback={submitFeedback}
                   updateUserAvatar={handleUpdateAvatar}
+                  crisisMode={crisisMode}
                   onLogout={handleLogout}
                 />
                 : <Navigate to="/" />
@@ -138,6 +165,7 @@ const App: React.FC = () => {
                   updateLocation={updateEmployeeLocation}
                   completeTask={completeTask}
                   updateUserAvatar={handleUpdateAvatar}
+                  crisisMode={crisisMode}
                   onLogout={handleLogout}
                 />
                 : <Navigate to="/" />
@@ -154,6 +182,8 @@ const App: React.FC = () => {
                   adminVerify={adminVerify}
                   adminReject={adminReject}
                   clearAllComplaints={clearAllComplaints}
+                  crisisMode={crisisMode}
+                  setCrisisMode={setCrisisMode}
                   onLogout={handleLogout}
                 />
                 : <Navigate to="/" />
