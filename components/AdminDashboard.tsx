@@ -538,8 +538,10 @@ const AdminDashboard: React.FC<Props> = ({ lang, setLang, complaints, assignEmpl
                                     ) : null}
                                     {selected.image && (
                                         <div className="mt-3">
-                                            <p className="text-xs text-slate-400 mb-1">{t.citizen_photo}</p>
-                                            <img src={selected.image} className="w-full max-h-96 object-contain bg-slate-900 rounded-lg shadow-sm" alt="Report" />
+                                            <p className="text-sm font-semibold text-slate-400 mb-2">{t.citizen_photo}</p>
+                                            <a href={selected.image} target="_blank" rel="noopener noreferrer" className="inline-block">
+                                                <img src={selected.image} className="max-w-full max-h-96 object-contain rounded-xl shadow-md border border-slate-600/50 hover:opacity-90 transition-all cursor-pointer" alt="Report" />
+                                            </a>
                                         </div>
                                     )}
                                 </div>
@@ -576,36 +578,38 @@ const AdminDashboard: React.FC<Props> = ({ lang, setLang, complaints, assignEmpl
 
                                 {/* VERIFY SECTION */}
                                 {selected.status === ComplaintStatus.JOB_COMPLETED && (
-                                    <div className="bg-emerald-900/30 border border-emerald-500/30 rounded-xl p-4 space-y-3">
-                                        <h3 className="font-bold text-emerald-300 flex items-center gap-2">
+                                    <div className="bg-emerald-900/30 border border-emerald-500/30 rounded-xl p-5 space-y-4 shadow-sm">
+                                        <h3 className="font-bold text-emerald-300 text-lg flex items-center gap-2">
                                             <i className="fas fa-clipboard-check"></i> {t.verification_required}
                                         </h3>
                                         <div>
-                                            <p className="text-xs text-slate-400 mb-1">{t.employee_proof}</p>
+                                            <p className="text-sm font-semibold text-slate-400 mb-2">{t.employee_proof}</p>
                                             {selected.completionImage
-                                                ? <img src={selected.completionImage} className="w-full h-40 object-contain bg-black rounded-lg" alt="Proof" />
-                                                : <p className="text-red-400 text-xs">{t.no_image_proof}</p>}
+                                                ? <a href={selected.completionImage} target="_blank" rel="noopener noreferrer" className="inline-block">
+                                                      <img src={selected.completionImage} className="max-w-full max-h-80 object-contain rounded-xl shadow-md border border-slate-600/50 hover:opacity-90 transition-all cursor-pointer" alt="Proof" />
+                                                  </a>
+                                                : <p className="text-red-400 text-sm font-medium">{t.no_image_proof}</p>}
                                         </div>
 
                                         {selected.aiVerification && (
-                                            <div className={`text-xs p-2.5 rounded-lg border flex items-start gap-2 ${selected.aiVerification.isResolved ? 'bg-emerald-900/40 border-emerald-500/50 text-emerald-300' : 'bg-red-900/40 border-red-500/50 text-red-300'}`}>
-                                                <i className={`fas fa-robot mt-0.5 ${selected.aiVerification.isResolved ? 'text-emerald-400' : 'text-red-400'}`}></i>
+                                            <div className={`p-4 rounded-xl border flex items-start gap-4 ${selected.aiVerification.isResolved ? 'bg-emerald-900/40 border-emerald-500/50 text-emerald-300' : 'bg-red-900/40 border-red-500/50 text-red-300'}`}>
+                                                <i className={`fas fa-robot mt-1.5 text-xl ${selected.aiVerification.isResolved ? 'text-emerald-400' : 'text-red-400'}`}></i>
                                                 <div>
-                                                    <strong>AI Verification {selected.aiVerification.isResolved ? 'Passed' : 'Failed'}:</strong>
-                                                    <p className="opacity-90 mt-0.5">{selected.aiVerification.reason}</p>
+                                                    <strong className="text-base block mb-1">AI Verification {selected.aiVerification.isResolved ? 'Passed' : 'Failed'}:</strong>
+                                                    <p className="opacity-90 leading-relaxed text-sm font-medium">{selected.aiVerification.reason}</p>
                                                 </div>
                                             </div>
                                         )}
                                         <button onClick={() => { adminVerify(selected.id); setSelected(null); }}
-                                            className="btn-primary btn-success">
-                                            <i className="fas fa-check-circle mr-2"></i> {t.verify_resolve}
+                                            className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3.5 text-base rounded-xl transition-all shadow-lg shadow-emerald-900/20">
+                                            <i className="fas fa-check-circle mr-2 text-lg"></i> {t.verify_resolve}
                                         </button>
-                                        <div className="flex gap-2">
+                                        <div className="flex gap-3">
                                             <input type="text" placeholder={t.rejection_reason}
-                                                className="flex-1 bg-slate-700 border border-slate-600 text-white text-sm p-2 rounded-lg placeholder-slate-500 focus:outline-none focus:border-red-400"
+                                                className="flex-1 bg-slate-800 border border-slate-600 text-white text-base p-3.5 rounded-xl placeholder-slate-500 focus:outline-none focus:border-red-400 focus:ring-1 focus:ring-red-400 transition-all"
                                                 value={rejectReason} onChange={e => setRejectReason(e.target.value)} />
                                             <button onClick={() => { if (rejectReason) { adminReject(selected.id, rejectReason); setSelected(null); } }}
-                                                className="bg-red-600 hover:bg-red-700 text-white px-4 rounded-lg font-bold text-sm transition-all">
+                                                className="bg-red-600 hover:bg-red-500 text-white px-6 rounded-xl font-bold text-base transition-all shadow-lg shadow-red-900/20">
                                                 {t.reject}
                                             </button>
                                         </div>
