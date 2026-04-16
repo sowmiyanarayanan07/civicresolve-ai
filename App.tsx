@@ -61,6 +61,8 @@ const App: React.FC = () => {
 
   const assignEmployee = async (complaintId: string, empId: string) => {
     await updateComplaint(complaintId, { assignedTo: empId, status: ComplaintStatus.ASSIGNED });
+    const dups = complaints.filter(c => c.parentId === complaintId);
+    for (const d of dups) await updateComplaint(d.id, { status: ComplaintStatus.ASSIGNED });
   };
 
   const submitFeedback = async (complaintId: string, rating: number, comments?: string) => {
@@ -69,18 +71,27 @@ const App: React.FC = () => {
 
   const updateStatus = async (complaintId: string, status: ComplaintStatus) => {
     await updateComplaint(complaintId, { status });
+    const dups = complaints.filter(c => c.parentId === complaintId);
+    for (const d of dups) await updateComplaint(d.id, { status });
   };
 
   const completeTask = async (complaintId: string, proofImage: string, aiVerification?: { isResolved: boolean; reason: string }) => {
     await updateComplaint(complaintId, { status: ComplaintStatus.JOB_COMPLETED, completionImage: proofImage, aiVerification });
+    const dups = complaints.filter(c => c.parentId === complaintId);
+    for (const d of dups) await updateComplaint(d.id, { status: ComplaintStatus.JOB_COMPLETED, completionImage: proofImage });
   };
 
   const adminVerify = async (complaintId: string) => {
-    await updateComplaint(complaintId, { status: ComplaintStatus.VERIFIED, resolvedAt: Date.now() });
+    const resolvedAt = Date.now();
+    await updateComplaint(complaintId, { status: ComplaintStatus.VERIFIED, resolvedAt });
+    const dups = complaints.filter(c => c.parentId === complaintId);
+    for (const d of dups) await updateComplaint(d.id, { status: ComplaintStatus.VERIFIED, resolvedAt });
   };
 
   const adminReject = async (complaintId: string, reason: string) => {
     await updateComplaint(complaintId, { status: ComplaintStatus.REJECTED, adminComment: reason });
+    const dups = complaints.filter(c => c.parentId === complaintId);
+    for (const d of dups) await updateComplaint(d.id, { status: ComplaintStatus.REJECTED, adminComment: reason });
   };
 
   const clearAllComplaints = async () => {
