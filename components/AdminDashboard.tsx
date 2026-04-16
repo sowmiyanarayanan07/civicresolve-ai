@@ -274,7 +274,7 @@ const AdminDashboard: React.FC<Props> = ({ lang, setLang, complaints, assignEmpl
             </aside>
 
             {/* ---- MAIN CONTENT ---- */}
-            <main className="flex-1 flex flex-col bg-slate-800">
+            <main className="flex-1 flex flex-col overflow-hidden bg-slate-800" style={{ minHeight: 0 }}>
 
                 {/* Crisis Mode view switcher */}
                 {crisisMode && (
@@ -310,7 +310,7 @@ const AdminDashboard: React.FC<Props> = ({ lang, setLang, complaints, assignEmpl
 
                 {/* Show DisasterMap when crisis mode + map view */}
                 {crisisMode && crisisView === 'map' ? (
-                    <div className="h-[600px] w-full">
+                    <div className="flex-1 overflow-hidden" style={{ minHeight: 0 }}>
                         <DisasterMap />
                     </div>
                 ) : (
@@ -331,9 +331,9 @@ const AdminDashboard: React.FC<Props> = ({ lang, setLang, complaints, assignEmpl
                 <AnalyticsCharts complaints={masters} />
 
                 {/* Complaints + Detail Panel */}
-                <div className="grid grid-cols-1 lg:grid-cols-12">
+                <div className="flex-1 grid grid-cols-1 lg:grid-cols-12 overflow-hidden">
                     {/* --- Left: Complaint/Employee List --- */}
-                    <div className="lg:col-span-4 border-r border-slate-700/50 flex flex-col">
+                    <div className="lg:col-span-4 border-r border-slate-700/50 flex flex-col overflow-hidden">
                         {/* Tabs */}
                         <div className="flex gap-1 p-3 border-b border-slate-700/50 bg-slate-800 flex-wrap">
                             {(['new', 'verify', 'all', 'employees'] as const).map(tb => (
@@ -350,7 +350,7 @@ const AdminDashboard: React.FC<Props> = ({ lang, setLang, complaints, assignEmpl
                         </div>
 
                         {/* List */}
-                        <div className="p-3 space-y-2">
+                        <div className="flex-1 overflow-y-auto p-3 space-y-2">
                             {tab !== 'employees' ? (
                                 <>
                                     {filteredComplaints.length === 0 && (
@@ -365,8 +365,8 @@ const AdminDashboard: React.FC<Props> = ({ lang, setLang, complaints, assignEmpl
                                         <div key={c.id}
                                             onClick={() => handleSelectComplaint(c)}
                                             className={`complaint-card bg-slate-700/60 border-slate-600/50 hover:border-indigo-400 cursor-pointer ${selected?.id === c.id ? 'border-indigo-400 bg-indigo-900/30' : ''}`}>
-                                            <div className="flex justify-between items-start">
-                                                <div className="flex-1 pr-2">
+                                            <div className="flex items-start gap-4">
+                                                <div className="flex-1 min-w-0 pr-2">
                                                     <p className="font-semibold text-sm text-slate-100 flex items-center flex-wrap gap-2">
                                                         {c.title}
                                                         {duplicates.length > 0 && (
@@ -450,14 +450,14 @@ const AdminDashboard: React.FC<Props> = ({ lang, setLang, complaints, assignEmpl
                     </div>
 
                     {/* --- Right: Action Panel --- */}
-                    <div className="lg:col-span-8 flex flex-col bg-slate-800">
-                        <div className="p-4 border-b border-slate-700/50">
+                    <div className="lg:col-span-8 flex flex-col overflow-hidden bg-slate-800">
+                        <div className="p-4 border-b border-slate-700/50 flex-shrink-0">
                             <h2 className="font-bold text-slate-100" style={{ fontFamily: 'Space Grotesk' }}>{t.action_details}</h2>
                         </div>
 
                         {tab === 'employees' ? (
-                            <div className="p-5">
-                                <div className="glass-card p-5 rounded-2xl border border-indigo-500/30 bg-indigo-900/10 w-full mt-4">
+                            <div className="flex-1 overflow-y-auto p-5">
+                                <div className="glass-card p-5 rounded-2xl border border-indigo-500/30 bg-indigo-900/10 max-w-2xl mx-auto w-full mt-4">
                                     <h3 className="text-lg font-bold text-white mb-1"><i className="fas fa-user-plus mr-2 text-indigo-400"></i>Add Employee</h3>
                                     <p className="text-xs text-slate-400 mb-5">Register a new field worker into the system.</p>
                                     
@@ -504,7 +504,7 @@ const AdminDashboard: React.FC<Props> = ({ lang, setLang, complaints, assignEmpl
                                 </div>
                             </div>
                         ) : selected ? (
-                            <div className="p-4 space-y-4">
+                            <div className="flex-1 overflow-y-auto p-4 space-y-4">
                                 {/* Complaint Info */}
                                 <div className="bg-slate-700/50 rounded-xl p-4 border border-slate-600/50">
                                     <div className="flex justify-between items-start mb-2">
@@ -539,7 +539,7 @@ const AdminDashboard: React.FC<Props> = ({ lang, setLang, complaints, assignEmpl
                                     {selected.image && (
                                         <div className="mt-3">
                                             <p className="text-xs text-slate-400 mb-1">{t.citizen_photo}</p>
-                                            <img src={selected.image} className="w-full h-32 object-cover rounded-lg" alt="Report" />
+                                            <img src={selected.image} className="w-full max-h-96 object-contain bg-slate-900 rounded-lg shadow-sm" alt="Report" />
                                         </div>
                                     )}
                                 </div>
@@ -682,17 +682,15 @@ const AdminDashboard: React.FC<Props> = ({ lang, setLang, complaints, assignEmpl
                                                                 setSelected(prev => prev ? { ...prev, assignedTo: emp.id, status: ComplaintStatus.ASSIGNED } : null);
                                                                 setShowReassign(false);
                                                             }}
-                                                            className="w-full flex items-center justify-between bg-slate-700/60 hover:bg-emerald-900/40 border border-slate-600 hover:border-emerald-500/50 px-4 py-3 rounded-xl transition-all">
-                                                            <div className="flex items-center gap-3">
-                                                                <div className="w-8 h-8 rounded-full bg-emerald-700 flex items-center justify-center text-sm font-bold">
-                                                                    {emp.name ? emp.name[0].toUpperCase() : '?'}
-                                                                </div>
-                                                                <div className="text-left">
-                                                                    <p className="font-semibold text-slate-100 text-sm">{emp.name}</p>
-                                                                    <p className="text-xs text-slate-400">{emp.department || emp.specialty}</p>
-                                                                </div>
+                                                            className="w-full flex items-center gap-4 bg-slate-700/60 hover:bg-emerald-900/40 border border-slate-600 hover:border-emerald-500/50 px-4 py-3 rounded-xl transition-all text-left">
+                                                            <div className="w-8 h-8 rounded-full bg-emerald-700 flex items-center justify-center text-sm font-bold flex-shrink-0">
+                                                                {emp.name ? emp.name[0].toUpperCase() : '?'}
                                                             </div>
-                                                            <span className="text-xs bg-emerald-900/60 text-emerald-400 border border-emerald-600/30 px-2 py-1 rounded-full">
+                                                            <div className="flex-1">
+                                                                <p className="font-semibold text-slate-100 text-sm">{emp.name}</p>
+                                                                <p className="text-xs text-slate-400">{emp.department || emp.specialty}</p>
+                                                            </div>
+                                                            <span className="text-xs bg-emerald-900/60 text-emerald-400 border border-emerald-600/30 px-2 py-1 rounded-full flex-shrink-0 ml-auto">
                                                                 <i className="fas fa-circle-check mr-1"></i>Free
                                                             </span>
                                                         </button>
@@ -711,7 +709,7 @@ const AdminDashboard: React.FC<Props> = ({ lang, setLang, complaints, assignEmpl
                                 )}
                             </div>
                         ) : (
-                            <div className="flex items-center justify-center text-slate-500 flex-col gap-3 py-16">
+                            <div className="flex-1 flex items-center justify-center text-slate-500 flex-col gap-3">
                                 <i className="fas fa-hand-pointer text-4xl text-slate-600"></i>
                                 <p className="text-sm">{t.select_complaint_action}</p>
                             </div>
