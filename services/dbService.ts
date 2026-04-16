@@ -245,7 +245,23 @@ export const updateComplaint = async (id: string, fields: Partial<Complaint>): P
     }
 
     const { error } = await sb.from('complaints').update(updates).eq('id', id);
-    if (error) throw new Error(`[Supabase] updateComplaint: ${error.message}`);
+    if (error) {
+        console.error(`[Supabase] updateComplaint error:`, error);
+        
+        // Auto-fallback if the resolved_at column is missing (user forgot to run the migration)
+        if (error.message.includes('resolved_at') && updates.resolved_at !== undefined) {
+            console.warn("Attempting fallback without resolved_at...");
+            delete updates.resolved_at;
+            const fallback = await sb.from('complaints').update(updates).eq('id', id);
+            if (fallback.error) {
+                alert(`Database Error: ${fallback.error.message}\nPlease check your database schema!`);
+                throw new Error(fallback.error.message);
+            }
+        } else {
+            alert(`Database Error: ${error.message}`);
+            throw new Error(`[Supabase] updateComplaint: ${error.message}`);
+        }
+    }
 
     // ── Refresh employee availability after completion / verification / rejection ─
     if (needsAvailabilityRefresh && currentEmployeeId) {
