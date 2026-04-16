@@ -24,6 +24,7 @@ const EmployeeDashboard: React.FC<Props> = ({ user, lang, setLang, complaints, u
     const [isOnline, setIsOnline] = useState(navigator.onLine);
     const [isVerifying, setIsVerifying] = useState(false);
     const [verificationError, setVerificationError] = useState<string | null>(null);
+    const [tab, setTab] = useState<'active' | 'completed'>('active');
     const [taskStatus, setTaskStatus] = useState<ComplaintStatus | null>(null);
     const t = TRANSLATIONS[lang];
 
@@ -122,9 +123,21 @@ const EmployeeDashboard: React.FC<Props> = ({ user, lang, setLang, complaints, u
         return idx === -1 ? 0 : Math.round(((idx + 1) / statusSteps.length) * 100);
     };
 
-    const assignedComplaints = complaints.filter(c =>
+    const getProgressPct = (s: ComplaintStatus | null) => {
+        if (!s) return 0;
+        const idx = statusSteps.indexOf(s);
+        return idx === -1 ? 0 : Math.round(((idx + 1) / statusSteps.length) * 100);
+    };
+
+    const activeTasks = complaints.filter(c =>
         c.status !== ComplaintStatus.VERIFIED && !c.parentId
     );
+    
+    const completedTasks = complaints.filter(c => 
+        c.status === ComplaintStatus.VERIFIED && !c.parentId
+    );
+
+    const visibleTasks = tab === 'active' ? activeTasks : completedTasks;
 
     const activeComplaint = complaints.find(c => c.id === activeTask);
 
@@ -326,10 +339,10 @@ const EmployeeDashboard: React.FC<Props> = ({ user, lang, setLang, complaints, u
                 </div>
             ) : (
                 /* ---- TASK LIST ---- */
-                <div className="p-4 space-y-4 max-w-lg mx-auto">
+                <div className="p-4 space-y-4 max-w-lg mx-auto pb-24">
                     <div className="flex items-center justify-between">
                         <h2 className={`font-bold ${crisisMode ? 'text-red-300' : 'text-slate-700'}`} style={{ fontFamily: 'Space Grotesk' }}>
-                            {crisisMode ? '🚨 Emergency Tasks' : t.active_tasks} ({assignedComplaints.length})
+                            {crisisMode ? '🚨 Emergency Tasks' : 'My Schedule'}
                         </h2>
                         <span className={`text-xs px-2.5 py-1.5 rounded-full font-semibold ${isOnline ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'}`}>
                             <i className={`fas fa-circle text-[8px] mr-1 ${isOnline ? 'text-emerald-500' : 'text-red-500'}`}></i>
@@ -337,17 +350,43 @@ const EmployeeDashboard: React.FC<Props> = ({ user, lang, setLang, complaints, u
                         </span>
                     </div>
 
-                    {assignedComplaints.length === 0 && (
-                        <div className="text-center py-20 text-slate-400">
-                            <i className="fas fa-check-double text-5xl block mb-4 text-emerald-200"></i>
-                            <p className="font-semibold">{t.all_caught_up}</p>
-                            <p className="text-sm mt-1">{t.no_pending_tasks}</p>
+                    <div className="flex gap-2 mb-4 bg-slate-200/50 p-1.5 rounded-xl border border-slate-200 shadow-inner">
+                        <button onClick={() => setTab('active')} 
+                            className={`flex-1 py-2 text-[13px] font-bold rounded-lg transition-all ${tab === 'active' ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-500 hover:bg-white hover:text-indigo-500'}`}>
+                            <i className="fas fa-list-check mr-1.5"></i> {t.active_tasks} ({activeTasks.length})
+                        </button>
+                        <button onClick={() => setTab('completed')} 
+                            className={`flex-1 py-2 text-[13px] font-bold rounded-lg transition-all ${tab === 'completed' ? 'bg-emerald-600 text-white shadow-md' : 'text-slate-500 hover:bg-white hover:text-emerald-600'}`}>
+                            <i className="fas fa-check-double mr-1.5"></i> Completed ({completedTasks.length})
+                        </button>
+                    </div>
+
+                    {visibleTasks.length === 0 && (
+                        <div className="text-center py-20 bg-white rounded-2xl shadow-sm border border-slate-100">
+                            {tab === 'active' ? (
+                                <>
+                                    <div className="w-16 h-16 bg-emerald-50 rounded-full flex items-center justify-center mx-auto mb-4">
+                                        <i className="fas fa-umbrella-beach text-3xl text-emerald-400"></i>
+                                    </div>
+                                    <p className="font-bold text-slate-700">{t.all_caught_up}</p>
+                                    <p className="text-xs text-slate-500 mt-1">{t.no_pending_tasks}</p>
+                                </>
+                            ) : (
+                                <>
+                                    <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-4">
+                                        <i className="fas fa-wind text-3xl text-slate-300"></i>
+                                    </div>
+                                    <p className="font-bold text-slate-700">No History Yet</p>
+                                    <p className="text-xs text-slate-500 mt-1">You haven't completed any tasks.</p>
+                                </>
+                            )}
                         </div>
                     )}
 
-                    {assignedComplaints.map(c => (
+                    {visibleTasks.map(c => (
                         <div key={c.id} className={crisisMode ? 'task-card-crisis fade-in-up' : 'task-card fade-in-up'} style={crisisMode ? undefined : {
-                            '--tw-border-left-color': c.priority === Priority.EMERGENCY ? '#dc2626' : c.priority === 'High' ? '#ea580c' : '#059669'
+                            '--tw-border-left-color': c.priority === Priority.EMERGENCY ? '#dc2626' : c.priority === 'High' ? '#ea580c' : '#059669',
+                            opacity: tab === 'completed' ? 0.75 : 1
                         } as React.CSSProperties}>
                             <div className="flex justify-between items-start mb-2">
                                 <div className="flex-1 pr-3">
@@ -362,38 +401,44 @@ const EmployeeDashboard: React.FC<Props> = ({ user, lang, setLang, complaints, u
                                 </div>
                             </div>
                             <p className={`text-sm mb-3 line-clamp-2 ${crisisMode ? 'text-red-300/70' : 'text-slate-500'}`}>{c.description}</p>
-                            <div className="flex items-center justify-between">
-                                <span className={`text-xs ${crisisMode ? 'text-red-400/60' : 'text-slate-400'}`}>
-                                    <i className={`fas fa-map-marker-alt mr-1 ${crisisMode ? 'text-red-500' : 'text-red-400'}`}></i>
+                            <div className="flex items-center justify-between mt-3 pt-3 border-t border-slate-100">
+                                <span className={`text-[11px] font-medium flex items-center ${crisisMode ? 'text-red-400/60' : 'text-slate-400'}`}>
+                                    <i className={`fas fa-map-marker-alt mr-1.5 ${crisisMode ? 'text-red-500' : 'text-indigo-400'}`}></i>
                                     {c.location.lat.toFixed(4)}, {c.location.lng.toFixed(4)}
                                 </span>
-                                <button
-                                    onClick={() => { 
-                                        setActiveTask(c.id); 
-                                        if (c.status === ComplaintStatus.ASSIGNED || c.status === ComplaintStatus.SUBMITTED) {
-                                            updateStatus(c.id, ComplaintStatus.ON_THE_WAY); 
-                                            setTaskStatus(ComplaintStatus.ON_THE_WAY); 
-                                        } else {
-                                            setTaskStatus(c.status as ComplaintStatus);
-                                        }
-                                    }}
-                                    className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-bold transition-all shadow-lg ${
-                                        c.status === ComplaintStatus.JOB_COMPLETED
-                                            ? 'bg-amber-600 hover:bg-amber-700 text-white shadow-amber-200'
-                                            : crisisMode
-                                                ? 'bg-red-700 hover:bg-red-600 text-white shadow-red-900'
-                                                : c.status !== ComplaintStatus.ASSIGNED && c.status !== ComplaintStatus.SUBMITTED
-                                                    ? 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-indigo-200'
-                                                    : 'bg-emerald-600 text-white hover:bg-emerald-700 shadow-emerald-200'
-                                    }`}>
-                                    {c.status === ComplaintStatus.JOB_COMPLETED ? (
-                                        <><i className="fas fa-hourglass-half"></i> Pending Review</>
-                                    ) : c.status !== ComplaintStatus.ASSIGNED && c.status !== ComplaintStatus.SUBMITTED ? (
-                                        <><i className="fas fa-play"></i> Resume Task</>
-                                    ) : (
-                                        <><i className="fas fa-play"></i> {crisisMode ? 'Respond' : t.start_task}</>
-                                    )}
-                                </button>
+                                {tab === 'active' ? (
+                                    <button
+                                        onClick={() => { 
+                                            setActiveTask(c.id); 
+                                            if (c.status === ComplaintStatus.ASSIGNED || c.status === ComplaintStatus.SUBMITTED) {
+                                                updateStatus(c.id, ComplaintStatus.ON_THE_WAY); 
+                                                setTaskStatus(ComplaintStatus.ON_THE_WAY); 
+                                            } else {
+                                                setTaskStatus(c.status as ComplaintStatus);
+                                            }
+                                        }}
+                                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all shadow-md ${
+                                            c.status === ComplaintStatus.JOB_COMPLETED
+                                                ? 'bg-amber-600 hover:bg-amber-700 text-white shadow-amber-200/50'
+                                                : crisisMode
+                                                    ? 'bg-red-700 hover:bg-red-600 text-white shadow-red-900/50'
+                                                    : c.status !== ComplaintStatus.ASSIGNED && c.status !== ComplaintStatus.SUBMITTED
+                                                        ? 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-indigo-200/50'
+                                                        : 'bg-emerald-600 text-white hover:bg-emerald-700 shadow-emerald-200/50'
+                                        }`}>
+                                        {c.status === ComplaintStatus.JOB_COMPLETED ? (
+                                            <><i className="fas fa-hourglass-half"></i> Pending Review</>
+                                        ) : c.status !== ComplaintStatus.ASSIGNED && c.status !== ComplaintStatus.SUBMITTED ? (
+                                            <><i className="fas fa-play"></i> Resume Task</>
+                                        ) : (
+                                            <><i className="fas fa-play"></i> {crisisMode ? 'Respond' : t.start_task}</>
+                                        )}
+                                    </button>
+                                ) : (
+                                    <span className="text-xs font-bold text-emerald-600 bg-emerald-50 px-3 py-1.5 rounded-lg">
+                                        <i className="fas fa-check-circle mr-1"></i> Verified
+                                    </span>
+                                )}
                             </div>
                         </div>
                     ))}
