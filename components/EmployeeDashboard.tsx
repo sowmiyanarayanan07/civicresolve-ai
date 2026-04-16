@@ -265,48 +265,59 @@ const EmployeeDashboard: React.FC<Props> = ({ user, lang, setLang, complaints, u
                             <i className="fas fa-diamond-turn-right"></i> {t.navigate}
                         </a>
 
-                        {/* Status Buttons */}
-                        <div className="grid grid-cols-2 gap-2">
-                            {[
-                                { label: t.mark_reached, status: ComplaintStatus.REACHED, color: 'bg-orange-500' },
-                                { label: t.in_progress_btn, status: ComplaintStatus.IN_PROGRESS, color: 'bg-yellow-500' },
-                            ].map(btn => (
-                                <button key={btn.status}
-                                    onClick={() => { updateStatus(activeTask, btn.status); setTaskStatus(btn.status); }}
-                                    className={`${btn.color} text-white py-2 rounded-xl font-semibold text-sm hover:opacity-90 transition-all`}>
-                                    {btn.label}
-                                </button>
-                            ))}
-                        </div>
-
-                        {/* Proof Upload */}
-                        <div className="border-t border-slate-100 pt-3">
-                            <p className="text-sm font-semibold text-slate-700 mb-2">{t.proof_completion}</p>
-                            <div className="flex gap-2 mb-2">
-                                <label className="flex-1 flex items-center justify-center gap-2 bg-slate-100 hover:bg-slate-200 p-2.5 rounded-xl cursor-pointer text-sm text-slate-600 font-medium transition-all">
-                                    <i className="fas fa-camera text-slate-400"></i> {t.upload_photo}
-                                    <input type="file" accept="image/*" className="hidden" onChange={handleProofUpload} disabled={isVerifying} />
-                                </label>
-                                {proofImage && <img src={proofImage} alt="Proof" className="h-12 w-12 rounded-xl object-cover shadow" />}
+                        {/* Status Buttons & Proof Upload - Hidden if Job Completed */}
+                        {taskStatus === ComplaintStatus.JOB_COMPLETED ? (
+                            <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-4 text-center">
+                                <i className="fas fa-check-circle text-3xl text-emerald-500 mb-2"></i>
+                                <p className="font-bold text-emerald-800 text-sm mb-1">Submitted for Verification</p>
+                                <p className="text-xs text-emerald-600">The Admin is currently reviewing your completed work. You will be notified once verified.</p>
                             </div>
-
-                            {verificationError && (
-                                <div className="bg-red-50 border border-red-200 text-red-700 text-xs p-2 rounded-lg mb-2">
-                                    <i className="fas fa-robot mr-1 text-red-600"></i>
-                                    <strong>AI Verification Failed:</strong> {verificationError}
+                        ) : (
+                            <>
+                                {/* Status Buttons */}
+                                <div className="grid grid-cols-2 gap-2">
+                                    {[
+                                        { label: t.mark_reached, status: ComplaintStatus.REACHED, color: 'bg-orange-500' },
+                                        { label: t.in_progress_btn, status: ComplaintStatus.IN_PROGRESS, color: 'bg-yellow-500' },
+                                    ].map(btn => (
+                                        <button key={btn.status}
+                                            onClick={() => { updateStatus(activeTask, btn.status); setTaskStatus(btn.status); }}
+                                            className={`${btn.color} text-white py-2 rounded-xl font-semibold text-sm hover:opacity-90 transition-all`}>
+                                            {btn.label}
+                                        </button>
+                                    ))}
                                 </div>
-                            )}
 
-                            <button onClick={submitCompletion}
-                                className={`btn-primary ${proofImage ? 'btn-success' : 'opacity-50 cursor-not-allowed'}`}
-                                disabled={!proofImage || isVerifying}>
-                                {isVerifying ? (
-                                    <><i className="fas fa-spinner fa-spin mr-2"></i> AI verifying...</>
-                                ) : (
-                                    <><i className="fas fa-check-circle mr-2"></i> {t.submit_verification}</>
-                                )}
-                            </button>
-                        </div>
+                                {/* Proof Upload */}
+                                <div className="border-t border-slate-100 pt-3">
+                                    <p className="text-sm font-semibold text-slate-700 mb-2">{t.proof_completion}</p>
+                                    <div className="flex gap-2 mb-2">
+                                        <label className="flex-1 flex items-center justify-center gap-2 bg-slate-100 hover:bg-slate-200 p-2.5 rounded-xl cursor-pointer text-sm text-slate-600 font-medium transition-all">
+                                            <i className="fas fa-camera text-slate-400"></i> {t.upload_photo}
+                                            <input type="file" accept="image/*" className="hidden" onChange={handleProofUpload} disabled={isVerifying} />
+                                        </label>
+                                        {proofImage && <img src={proofImage} alt="Proof" className="h-12 w-12 rounded-xl object-cover shadow" />}
+                                    </div>
+
+                                    {verificationError && (
+                                        <div className="bg-red-50 border border-red-200 text-red-700 text-xs p-2 rounded-lg mb-2">
+                                            <i className="fas fa-robot mr-1 text-red-600"></i>
+                                            <strong>AI Verification Failed:</strong> {verificationError}
+                                        </div>
+                                    )}
+
+                                    <button onClick={submitCompletion}
+                                        className={`btn-primary ${proofImage ? 'btn-success' : 'opacity-50 cursor-not-allowed'}`}
+                                        disabled={!proofImage || isVerifying}>
+                                        {isVerifying ? (
+                                            <><i className="fas fa-spinner fa-spin mr-2"></i> AI verifying...</>
+                                        ) : (
+                                            <><i className="fas fa-check-circle mr-2"></i> {t.submit_verification}</>
+                                        )}
+                                    </button>
+                                </div>
+                            </>
+                        )}
 
                         <button onClick={() => setActiveTask(null)} className="w-full text-center text-red-500 text-sm font-medium hover:text-red-700 transition-colors">
                             <i className="fas fa-arrow-left mr-1"></i> {t.back_to_tasks}
@@ -357,13 +368,31 @@ const EmployeeDashboard: React.FC<Props> = ({ user, lang, setLang, complaints, u
                                     {c.location.lat.toFixed(4)}, {c.location.lng.toFixed(4)}
                                 </span>
                                 <button
-                                    onClick={() => { setActiveTask(c.id); updateStatus(c.id, ComplaintStatus.ON_THE_WAY); setTaskStatus(ComplaintStatus.ON_THE_WAY); }}
+                                    onClick={() => { 
+                                        setActiveTask(c.id); 
+                                        if (c.status === ComplaintStatus.ASSIGNED || c.status === ComplaintStatus.SUBMITTED) {
+                                            updateStatus(c.id, ComplaintStatus.ON_THE_WAY); 
+                                            setTaskStatus(ComplaintStatus.ON_THE_WAY); 
+                                        } else {
+                                            setTaskStatus(c.status as ComplaintStatus);
+                                        }
+                                    }}
                                     className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-bold transition-all shadow-lg ${
-                                        crisisMode
-                                            ? 'bg-red-700 hover:bg-red-600 text-white shadow-red-900'
-                                            : 'bg-emerald-600 text-white hover:bg-emerald-700 shadow-emerald-200'
+                                        c.status === ComplaintStatus.JOB_COMPLETED
+                                            ? 'bg-amber-600 hover:bg-amber-700 text-white shadow-amber-200'
+                                            : crisisMode
+                                                ? 'bg-red-700 hover:bg-red-600 text-white shadow-red-900'
+                                                : c.status !== ComplaintStatus.ASSIGNED && c.status !== ComplaintStatus.SUBMITTED
+                                                    ? 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-indigo-200'
+                                                    : 'bg-emerald-600 text-white hover:bg-emerald-700 shadow-emerald-200'
                                     }`}>
-                                    <i className="fas fa-play"></i> {crisisMode ? 'Respond' : t.start_task}
+                                    {c.status === ComplaintStatus.JOB_COMPLETED ? (
+                                        <><i className="fas fa-hourglass-half"></i> Pending Review</>
+                                    ) : c.status !== ComplaintStatus.ASSIGNED && c.status !== ComplaintStatus.SUBMITTED ? (
+                                        <><i className="fas fa-play"></i> Resume Task</>
+                                    ) : (
+                                        <><i className="fas fa-play"></i> {crisisMode ? 'Respond' : t.start_task}</>
+                                    )}
                                 </button>
                             </div>
                         </div>
