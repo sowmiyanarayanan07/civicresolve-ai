@@ -331,9 +331,9 @@ const AdminDashboard: React.FC<Props> = ({ lang, setLang, complaints, assignEmpl
                 <AnalyticsCharts complaints={masters} />
 
                 {/* Complaints + Detail Panel */}
-                <div className="flex-1 grid grid-cols-1 lg:grid-cols-12 overflow-hidden">
+                <div className="flex-1 flex flex-col md:flex-row overflow-hidden bg-slate-800">
                     {/* --- Left: Complaint/Employee List --- */}
-                    <div className="lg:col-span-4 border-r border-slate-700/50 flex flex-col overflow-hidden">
+                    <div className="w-full md:w-80 lg:w-96 flex-shrink-0 border-r border-slate-700/50 flex flex-col overflow-hidden bg-slate-900/40">
                         {/* Tabs */}
                         <div className="flex gap-1 p-3 border-b border-slate-700/50 bg-slate-800 flex-wrap">
                             {(['new', 'verify', 'all', 'employees'] as const).map(tb => (
@@ -450,15 +450,15 @@ const AdminDashboard: React.FC<Props> = ({ lang, setLang, complaints, assignEmpl
                     </div>
 
                     {/* --- Right: Action Panel --- */}
-                    <div className="lg:col-span-8 flex flex-col overflow-hidden bg-slate-800">
-                        <div className="p-4 border-b border-slate-700/50 flex-shrink-0">
+                    <div className="flex-1 flex flex-col overflow-hidden bg-slate-800 relative shadow-inner">
+                        <div className="p-4 border-b border-slate-700/50 flex-shrink-0 bg-slate-800/80 backdrop-blur z-10 sticky top-0">
                             <h2 className="font-bold text-slate-100" style={{ fontFamily: 'Space Grotesk' }}>{t.action_details}</h2>
                         </div>
 
                         {tab === 'employees' ? (
-                            <div className="flex-1 overflow-y-auto p-5">
-                                <div className="glass-card p-6 rounded-2xl border border-indigo-500/30 bg-indigo-900/10 w-full mt-2">
-                                    <h3 className="text-xl font-bold text-white mb-2"><i className="fas fa-user-plus mr-2 text-indigo-400"></i>Add New Worker</h3>
+                            <div className="flex-1 overflow-y-auto p-4 md:p-6 lg:p-8">
+                                <div className="max-w-3xl mx-auto glass-card p-6 md:p-8 rounded-3xl border border-indigo-500/30 bg-indigo-900/10 shadow-2xl mt-4">
+                                    <h3 className="text-xl md:text-2xl font-bold text-white mb-2"><i className="fas fa-user-plus mr-3 text-indigo-400"></i>Add New Worker</h3>
                                     <p className="text-sm text-slate-400 mb-6">Register a new field worker into the crisis management system.</p>
                                     
                                     {empError && (
@@ -506,9 +506,10 @@ const AdminDashboard: React.FC<Props> = ({ lang, setLang, complaints, assignEmpl
                                 </div>
                             </div>
                         ) : selected ? (
-                            <div className="flex-1 overflow-y-auto p-5 space-y-5">
-                                {/* Complaint Info */}
-                                <div className="bg-slate-700/50 rounded-2xl p-5 border border-slate-600/50 flex flex-col xl:flex-row gap-6">
+                            <div className="flex-1 overflow-y-auto p-4 md:p-6 lg:p-8">
+                                <div className="max-w-5xl mx-auto w-full space-y-6">
+                                    {/* Complaint Info */}
+                                    <div className="bg-slate-700/40 rounded-3xl p-6 border border-slate-600/40 flex flex-col xl:flex-row gap-8 shadow-lg">
                                     <div className="flex-1 flex flex-col justify-center">
                                         <div className="flex justify-between items-start mb-3">
                                             <p className="font-bold text-indigo-300 text-lg leading-snug pr-4">{selected.title}</p>
@@ -631,18 +632,20 @@ const AdminDashboard: React.FC<Props> = ({ lang, setLang, complaints, assignEmpl
                                                 )}
                                             </div>
                                         </div>
-                                        <button onClick={() => { adminVerify(selected.id); setSelected(null); }}
-                                            className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3.5 text-base rounded-xl transition-all shadow-lg shadow-emerald-900/20">
-                                            <i className="fas fa-check-circle mr-2 text-lg"></i> {t.verify_resolve}
-                                        </button>
-                                        <div className="flex gap-3">
-                                            <input type="text" placeholder={t.rejection_reason}
-                                                className="flex-1 bg-slate-800 border border-slate-600 text-white text-base p-3.5 rounded-xl placeholder-slate-500 focus:outline-none focus:border-red-400 focus:ring-1 focus:ring-red-400 transition-all"
-                                                value={rejectReason} onChange={e => setRejectReason(e.target.value)} />
-                                            <button onClick={() => { if (rejectReason) { adminReject(selected.id, rejectReason); setSelected(null); } }}
-                                                className="bg-red-600 hover:bg-red-500 text-white px-6 rounded-xl font-bold text-base transition-all shadow-lg shadow-red-900/20">
-                                                {t.reject}
+                                        <div className="flex flex-col md:flex-row gap-4 pt-4 border-t border-emerald-500/20">
+                                            <button onClick={() => { adminVerify(selected.id); setSelected(null); }}
+                                                className="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-4 text-base rounded-2xl transition-all shadow-lg shadow-emerald-900/30">
+                                                <i className="fas fa-check-circle mr-2 text-lg"></i> {t.verify_resolve}
                                             </button>
+                                            <div className="flex-1 flex gap-2">
+                                                <input type="text" placeholder={t.rejection_reason}
+                                                    className="w-full bg-slate-800 border border-slate-600/80 text-white text-base p-4 rounded-2xl placeholder-slate-500 focus:outline-none focus:border-red-400 focus:ring-2 focus:ring-red-400 transition-all shadow-inner"
+                                                    value={rejectReason} onChange={e => setRejectReason(e.target.value)} />
+                                                <button onClick={() => { if (rejectReason) { adminReject(selected.id, rejectReason); setSelected(null); } }}
+                                                    className="bg-red-600 hover:bg-red-500 text-white px-6 rounded-2xl font-bold text-base transition-all shadow-lg shadow-red-900/30 whitespace-nowrap">
+                                                    {t.reject}
+                                                </button>
+                                            </div>
                                         </div>
                                     </div>
                                 )}
@@ -651,30 +654,30 @@ const AdminDashboard: React.FC<Props> = ({ lang, setLang, complaints, assignEmpl
                                 {selected.assignedTo && selected.status !== ComplaintStatus.VERIFIED && (() => {
                                     const assignedEmp = [...employees, ...MOCK_EMPLOYEES].find((e: any) => e.id === selected.assignedTo);
                                     return assignedEmp ? (
-                                        <div className="bg-emerald-900/20 border border-emerald-600/30 rounded-xl p-4">
-                                            <p className="text-xs text-emerald-400 uppercase tracking-wider font-semibold mb-2">
-                                                <i className="fas fa-user-check mr-1"></i> Assigned Worker
+                                        <div className="bg-emerald-900/20 border border-emerald-600/30 rounded-2xl p-5 shadow-sm">
+                                            <p className="text-xs text-emerald-400 uppercase tracking-widest font-bold mb-3">
+                                                <i className="fas fa-user-check mr-2"></i> Assigned Worker
                                             </p>
-                                            <div className="flex items-center gap-3">
-                                                <div className="w-10 h-10 rounded-full bg-emerald-700 flex items-center justify-center text-sm font-bold text-white flex-shrink-0">
+                                            <div className="flex items-center gap-4">
+                                                <div className="w-12 h-12 rounded-full bg-emerald-600 flex items-center justify-center text-lg font-bold text-white flex-shrink-0 shadow-md">
                                                     {assignedEmp.name?.[0]?.toUpperCase() || '?'}
                                                 </div>
                                                 <div>
-                                                    <p className="font-bold text-slate-100 text-sm">{assignedEmp.name}</p>
-                                                    <p className="text-xs text-slate-400">{assignedEmp.department || (assignedEmp as any).specialty}</p>
-                                                    {assignedEmp.email && <p className="text-xs text-slate-500">{assignedEmp.email}</p>}
+                                                    <p className="font-bold text-slate-100 text-base">{assignedEmp.name}</p>
+                                                    <p className="text-sm text-slate-400">{assignedEmp.department || (assignedEmp as any).specialty}</p>
+                                                    {assignedEmp.email && <p className="text-xs text-slate-500 mt-1">{assignedEmp.email}</p>}
                                                     {assignedEmp.phone && <p className="text-xs text-slate-500"><i className="fas fa-phone mr-1"></i>{assignedEmp.phone}</p>}
                                                 </div>
                                             </div>
                                         </div>
                                     ) : (
-                                        <p className="text-xs text-slate-400">Assigned to: <code className="text-indigo-300">{selected.assignedTo}</code></p>
+                                        <p className="text-xs text-slate-400">Assigned to: <code className="text-indigo-300 bg-slate-900 px-2 py-1 rounded">{selected.assignedTo}</code></p>
                                     );
                                 })()}
 
                                 {/* ASSIGN / REASSIGN SECTION */}
                                 {selected.status !== ComplaintStatus.VERIFIED && (
-                                    <div className="space-y-2">
+                                    <div className="bg-slate-800/40 border border-slate-700/50 rounded-2xl p-5 shadow-sm space-y-4">
                                         <div className="flex items-center justify-between">
                                             <p className="text-sm font-semibold text-slate-200">
                                                 {selected.assignedTo ? (
