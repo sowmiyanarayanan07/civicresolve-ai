@@ -457,90 +457,97 @@ const AdminDashboard: React.FC<Props> = ({ lang, setLang, complaints, assignEmpl
 
                         {tab === 'employees' ? (
                             <div className="flex-1 overflow-y-auto p-5">
-                                <div className="glass-card p-5 rounded-2xl border border-indigo-500/30 bg-indigo-900/10 max-w-2xl mx-auto w-full mt-4">
-                                    <h3 className="text-lg font-bold text-white mb-1"><i className="fas fa-user-plus mr-2 text-indigo-400"></i>Add Employee</h3>
-                                    <p className="text-xs text-slate-400 mb-5">Register a new field worker into the system.</p>
+                                <div className="glass-card p-6 rounded-2xl border border-indigo-500/30 bg-indigo-900/10 w-full mt-2">
+                                    <h3 className="text-xl font-bold text-white mb-2"><i className="fas fa-user-plus mr-2 text-indigo-400"></i>Add New Worker</h3>
+                                    <p className="text-sm text-slate-400 mb-6">Register a new field worker into the crisis management system.</p>
                                     
                                     {empError && (
-                                        <div className="mb-4 p-3 bg-red-900/50 border border-red-500/50 rounded-lg text-xs text-red-200">
-                                            <i className="fas fa-triangle-exclamation mr-1.5"></i>{empError}
+                                        <div className="mb-5 p-4 bg-red-900/50 border border-red-500/50 rounded-lg text-sm text-red-200 shadow-md">
+                                            <i className="fas fa-triangle-exclamation mr-2"></i>{empError}
                                         </div>
                                     )}
 
-                                    <form onSubmit={handleAddEmployee} className="space-y-4">
-                                        <div>
-                                            <label className="block text-[11px] font-semibold text-slate-400 uppercase tracking-wide mb-1">Full Name</label>
-                                            <input type="text" required value={empName} onChange={e => setEmpName(e.target.value)}
-                                                className="w-full bg-slate-800 border border-slate-600 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-400 transition-all placeholder-slate-500"
-                                                placeholder="e.g. Ramesh Kumar" />
+                                    <form onSubmit={handleAddEmployee} className="space-y-5">
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                                            <div>
+                                                <label className="block text-xs font-bold text-slate-300 uppercase tracking-wide mb-1.5">Full Name</label>
+                                                <input type="text" required value={empName} onChange={e => setEmpName(e.target.value)}
+                                                    className="w-full bg-slate-800 border border-slate-600 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-indigo-400 transition-all placeholder-slate-500"
+                                                    placeholder="e.g. Ramesh Kumar" />
+                                            </div>
+                                            <div>
+                                                <label className="block text-xs font-bold text-slate-300 uppercase tracking-wide mb-1.5">Email Address</label>
+                                                <input type="email" required value={empEmail} onChange={e => setEmpEmail(e.target.value)}
+                                                    className="w-full bg-slate-800 border border-slate-600 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-indigo-400 transition-all placeholder-slate-500"
+                                                    placeholder="worker@civicresolve.in" />
+                                            </div>
+                                            <div>
+                                                <label className="block text-xs font-bold text-slate-300 uppercase tracking-wide mb-1.5">Phone Number</label>
+                                                <input type="tel" required value={empPhone} onChange={e => setEmpPhone(e.target.value)}
+                                                    className="w-full bg-slate-800 border border-slate-600 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-indigo-400 transition-all placeholder-slate-500"
+                                                    placeholder="e.g. 9876543210" />
+                                            </div>
+                                            <div>
+                                                <label className="block text-xs font-bold text-slate-300 uppercase tracking-wide mb-1.5">Department / Specialty</label>
+                                                <select required value={empDept} onChange={e => setEmpDept(e.target.value)}
+                                                    className="w-full bg-slate-800 border border-slate-600 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-indigo-400 transition-all placeholder-slate-500 appearance-none">
+                                                    <option value="" disabled>Select Department</option>
+                                                    <option value="light">Light</option>
+                                                    <option value="pothole">Pothole</option>
+                                                    <option value="drainage">Drainage</option>
+                                                    <option value="water_supply">Water Supply</option>
+                                                </select>
+                                            </div>
                                         </div>
-                                        <div>
-                                            <label className="block text-[11px] font-semibold text-slate-400 uppercase tracking-wide mb-1">Email Address</label>
-                                            <input type="email" required value={empEmail} onChange={e => setEmpEmail(e.target.value)}
-                                                className="w-full bg-slate-800 border border-slate-600 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-400 transition-all placeholder-slate-500"
-                                                placeholder="worker@civicresolve.in" />
-                                        </div>
-                                        <div>
-                                            <label className="block text-[11px] font-semibold text-slate-400 uppercase tracking-wide mb-1">Phone Number</label>
-                                            <input type="tel" required value={empPhone} onChange={e => setEmpPhone(e.target.value)}
-                                                className="w-full bg-slate-800 border border-slate-600 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-400 transition-all placeholder-slate-500"
-                                                placeholder="e.g. 9876543210" />
-                                        </div>
-                                        <div>
-                                            <label className="block text-[11px] font-semibold text-slate-400 uppercase tracking-wide mb-1">Department / Specialty</label>
-                                            <select required value={empDept} onChange={e => setEmpDept(e.target.value)}
-                                                className="w-full bg-slate-800 border border-slate-600 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-400 transition-all placeholder-slate-500 appearance-none">
-                                                <option value="" disabled>Select Department</option>
-                                                <option value="light">Light</option>
-                                                <option value="pothole">Pothole</option>
-                                                <option value="drainage">Drainage</option>
-                                                <option value="water_supply">Water Supply</option>
-                                            </select>
-                                        </div>
-                                        <button type="submit" disabled={addingEmp} className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-2.5 rounded-xl text-sm transition-all shadow-lg shadow-indigo-600/20 disabled:opacity-50 mt-2">
+                                        <button type="submit" disabled={addingEmp} className="w-full md:w-auto md:min-w-[250px] ml-auto block bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-3 px-6 rounded-xl text-sm transition-all shadow-lg shadow-indigo-600/20 disabled:opacity-50 mt-4">
                                             {addingEmp ? <><i className="fas fa-spinner fa-spin mr-2"></i>Adding...</> : <><i className="fas fa-plus mr-2"></i>Register Employee</>}
                                         </button>
                                     </form>
                                 </div>
                             </div>
                         ) : selected ? (
-                            <div className="flex-1 overflow-y-auto p-4 space-y-4">
+                            <div className="flex-1 overflow-y-auto p-5 space-y-5">
                                 {/* Complaint Info */}
-                                <div className="bg-slate-700/50 rounded-xl p-4 border border-slate-600/50">
-                                    <div className="flex justify-between items-start mb-2">
-                                        <p className="font-bold text-indigo-300">{selected.title}</p>
-                                        <span className={priorityBadgeClass(selected.priority)}>{selected.priority}</span>
-                                    </div>
-                                    <p className="text-sm text-slate-300 mb-2">{selected.description}</p>
-                                    {selected.status === ComplaintStatus.VERIFIED && selected.resolvedAt ? (
-                                        <div className="text-xs text-emerald-400 bg-emerald-900/20 rounded-lg p-2.5 border border-emerald-500/30 flex items-center gap-2">
-                                            <i className="fas fa-check-circle text-emerald-500"></i>
-                                            <strong>Resolved in:</strong> {formatDuration(selected.resolvedAt - selected.createdAt)}
+                                <div className="bg-slate-700/50 rounded-2xl p-5 border border-slate-600/50 flex flex-col xl:flex-row gap-6">
+                                    <div className="flex-1 flex flex-col justify-center">
+                                        <div className="flex justify-between items-start mb-3">
+                                            <p className="font-bold text-indigo-300 text-lg leading-snug pr-4">{selected.title}</p>
+                                            <span className={priorityBadgeClass(selected.priority)}>{selected.priority}</span>
                                         </div>
-                                    ) : selected.aiAnalysis ? (
-                                        <div className="text-xs text-slate-400 bg-slate-800/50 rounded-lg p-3 border border-slate-600/30">
-                                            <p className="mb-2"><i className="fas fa-robot mr-1 text-indigo-400"></i><strong>AI Analysis:</strong> {selected.aiAnalysis.reason}</p>
-                                            <div className="flex gap-4">
-                                                <span><i className="fas fa-building mr-1"></i> {selected.aiAnalysis.department}</span>
-                                                <span className="text-indigo-300 font-semibold"><i className="fas fa-clock mr-1"></i> Est: {selected.aiAnalysis.estimatedTime}</span>
+                                        <p className="text-base text-slate-300 mb-4 bg-slate-800/40 p-3 rounded-xl border border-slate-700/50">{selected.description}</p>
+                                        {selected.status === ComplaintStatus.VERIFIED && selected.resolvedAt ? (
+                                            <div className="text-sm text-emerald-400 bg-emerald-900/20 rounded-xl p-3 border border-emerald-500/30 flex items-center gap-2 font-medium">
+                                                <i className="fas fa-check-circle text-emerald-500"></i>
+                                                <strong>Resolved in:</strong> {formatDuration(selected.resolvedAt - selected.createdAt)}
                                             </div>
-                                            {selected.aiAnalysis.equipmentNeeded && selected.aiAnalysis.equipmentNeeded.length > 0 && (
-                                                <div className="mt-3 pt-2 border-t border-slate-700/50">
-                                                    <p className="font-bold text-slate-300 mb-1"><i className="fas fa-toolbox text-amber-500 mr-1"></i> Suggested Resources:</p>
-                                                    <ul className="list-disc list-inside text-slate-400 space-y-0.5 ml-1">
-                                                        {selected.aiAnalysis.equipmentNeeded.map((eq, i) => (
-                                                            <li key={i}>{eq}</li>
-                                                        ))}
-                                                    </ul>
+                                        ) : selected.aiAnalysis ? (
+                                            <div className="text-sm text-slate-400 bg-slate-800/50 rounded-xl p-4 border border-slate-600/30">
+                                                <p className="mb-3 text-slate-300"><i className="fas fa-robot mr-2 text-indigo-400"></i><strong>AI Analysis:</strong> {selected.aiAnalysis.reason}</p>
+                                                <div className="flex gap-4 p-3 bg-slate-900/50 rounded-lg shadow-inner">
+                                                    <span className="flex items-center"><i className="fas fa-building mr-2 text-slate-500"></i> {selected.aiAnalysis.department}</span>
+                                                    <span className="text-indigo-300 font-semibold flex items-center"><i className="fas fa-clock mr-2"></i> Est: {selected.aiAnalysis.estimatedTime}</span>
                                                 </div>
-                                            )}
-                                        </div>
-                                    ) : null}
+                                                {selected.aiAnalysis.equipmentNeeded && selected.aiAnalysis.equipmentNeeded.length > 0 && (
+                                                    <div className="mt-4 pt-3 border-t border-slate-700/50">
+                                                        <p className="font-bold text-slate-300 mb-2 text-xs uppercase tracking-wider"><i className="fas fa-toolbox text-amber-500 mr-2"></i> Suggested Resources</p>
+                                                        <div className="flex flex-wrap gap-2">
+                                                            {selected.aiAnalysis.equipmentNeeded.map((eq, i) => (
+                                                                <span key={i} className="bg-slate-700 text-slate-300 px-3 py-1 rounded-full text-xs font-medium border border-slate-600">{eq}</span>
+                                                            ))}
+                                                        </div>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        ) : null}
+                                    </div>
                                     {selected.image && (
-                                        <div className="mt-3">
-                                            <p className="text-sm font-semibold text-slate-400 mb-2">{t.citizen_photo}</p>
-                                            <a href={selected.image} target="_blank" rel="noopener noreferrer" className="inline-block">
-                                                <img src={selected.image} className="max-w-full max-h-96 object-contain rounded-xl shadow-md border border-slate-600/50 hover:opacity-90 transition-all cursor-pointer" alt="Report" />
+                                        <div className="xl:w-5/12 max-w-sm flex-shrink-0 flex flex-col justify-center bg-slate-800/40 p-3 rounded-2xl border border-slate-700/50">
+                                            <p className="text-sm font-semibold text-slate-400 mb-2 flex justify-between items-center">
+                                                {t.citizen_photo}
+                                                <i className="fas fa-expand text-slate-500 hover:text-white cursor-pointer" title="Click image to open"></i>
+                                            </p>
+                                            <a href={selected.image} target="_blank" rel="noopener noreferrer" className="block w-full">
+                                                <img src={selected.image} className="w-full h-auto max-h-[300px] object-contain rounded-xl shadow-md border border-slate-600/50 hover:opacity-90 transition-all cursor-pointer bg-black" alt="Report" />
                                             </a>
                                         </div>
                                     )}
@@ -578,28 +585,52 @@ const AdminDashboard: React.FC<Props> = ({ lang, setLang, complaints, assignEmpl
 
                                 {/* VERIFY SECTION */}
                                 {selected.status === ComplaintStatus.JOB_COMPLETED && (
-                                    <div className="bg-emerald-900/30 border border-emerald-500/30 rounded-xl p-5 space-y-4 shadow-sm">
-                                        <h3 className="font-bold text-emerald-300 text-lg flex items-center gap-2">
-                                            <i className="fas fa-clipboard-check"></i> {t.verification_required}
+                                    <div className="bg-emerald-900/30 border border-emerald-500/40 rounded-2xl p-6 space-y-5 shadow-lg relative overflow-hidden">
+                                        <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/10 rounded-bl-full -mr-10 -mt-10 pointer-events-none"></div>
+                                        <h3 className="font-bold text-emerald-300 text-xl flex items-center gap-3 border-b border-emerald-500/20 pb-3">
+                                            <i className="fas fa-clipboard-check text-2xl"></i> {t.verification_required}
                                         </h3>
-                                        <div>
-                                            <p className="text-sm font-semibold text-slate-400 mb-2">{t.employee_proof}</p>
-                                            {selected.completionImage
-                                                ? <a href={selected.completionImage} target="_blank" rel="noopener noreferrer" className="inline-block">
-                                                      <img src={selected.completionImage} className="max-w-full max-h-80 object-contain rounded-xl shadow-md border border-slate-600/50 hover:opacity-90 transition-all cursor-pointer" alt="Proof" />
-                                                  </a>
-                                                : <p className="text-red-400 text-sm font-medium">{t.no_image_proof}</p>}
-                                        </div>
-
-                                        {selected.aiVerification && (
-                                            <div className={`p-4 rounded-xl border flex items-start gap-4 ${selected.aiVerification.isResolved ? 'bg-emerald-900/40 border-emerald-500/50 text-emerald-300' : 'bg-red-900/40 border-red-500/50 text-red-300'}`}>
-                                                <i className={`fas fa-robot mt-1.5 text-xl ${selected.aiVerification.isResolved ? 'text-emerald-400' : 'text-red-400'}`}></i>
-                                                <div>
-                                                    <strong className="text-base block mb-1">AI Verification {selected.aiVerification.isResolved ? 'Passed' : 'Failed'}:</strong>
-                                                    <p className="opacity-90 leading-relaxed text-sm font-medium">{selected.aiVerification.reason}</p>
-                                                </div>
+                                        
+                                        <div className="flex flex-col xl:flex-row gap-6 relative z-10">
+                                            <div className="flex-1 flex flex-col justify-center">
+                                                {selected.aiVerification && (
+                                                    <div className={`p-5 rounded-xl border flex items-start gap-4 shadow-inner mb-4 ${selected.aiVerification.isResolved ? 'bg-emerald-900/50 border-emerald-500/50' : 'bg-red-900/50 border-red-500/50'}`}>
+                                                        <i className={`fas fa-robot mt-1 text-2xl ${selected.aiVerification.isResolved ? 'text-emerald-400' : 'text-red-400'}`}></i>
+                                                        <div>
+                                                            <strong className={`text-lg block mb-1.5 ${selected.aiVerification.isResolved ? 'text-emerald-300' : 'text-red-300'}`}>
+                                                                AI Verification {selected.aiVerification.isResolved ? 'Passed' : 'Failed'}
+                                                            </strong>
+                                                            <p className={`text-base leading-relaxed ${selected.aiVerification.isResolved ? 'text-emerald-100/90' : 'text-red-100/90'}`}>
+                                                                {selected.aiVerification.reason}
+                                                            </p>
+                                                        </div>
+                                                    </div>
+                                                )}
+                                                <p className="text-sm text-slate-400 italic bg-black/20 p-3 rounded-lg border border-white/5">
+                                                    <i className="fas fa-info-circle mr-2 text-indigo-400"></i>
+                                                    Review the attached photo constraint from the employee to verify if the issue was adequately resolved before approving.
+                                                </p>
                                             </div>
-                                        )}
+                                            
+                                            <div className="xl:w-5/12 max-w-sm flex-shrink-0 flex flex-col">
+                                                <p className="text-sm font-semibold text-slate-400 mb-2 flex justify-between items-center px-1">
+                                                    {t.employee_proof}
+                                                    <i className="fas fa-expand text-slate-500"></i>
+                                                </p>
+                                                {selected.completionImage ? (
+                                                    <a href={selected.completionImage} target="_blank" rel="noopener noreferrer" className="block w-full">
+                                                        <img src={selected.completionImage} className="w-full h-auto max-h-[250px] object-contain rounded-xl shadow-[0_0_15px_rgba(0,0,0,0.5)] border-2 border-slate-600 hover:border-emerald-500 transition-all cursor-pointer bg-black/50" alt="Proof" />
+                                                    </a>
+                                                ) : (
+                                                    <div className="w-full h-32 flex items-center justify-center bg-slate-800 rounded-xl border-2 border-dashed border-slate-600">
+                                                        <p className="text-red-400 text-sm font-bold flex flex-col items-center gap-2">
+                                                            <i className="fas fa-image-slash text-2xl"></i>
+                                                            {t.no_image_proof}
+                                                        </p>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
                                         <button onClick={() => { adminVerify(selected.id); setSelected(null); }}
                                             className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3.5 text-base rounded-xl transition-all shadow-lg shadow-emerald-900/20">
                                             <i className="fas fa-check-circle mr-2 text-lg"></i> {t.verify_resolve}
