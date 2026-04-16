@@ -745,6 +745,7 @@ const AdminDashboard: React.FC<Props> = ({ lang, setLang, complaints, assignEmpl
                                         {t.verified_msg}
                                     </div>
                                 )}
+                                </div>
                             </div>
                         ) : (
                             <div className="flex-1 flex items-center justify-center text-slate-500 flex-col gap-3">
