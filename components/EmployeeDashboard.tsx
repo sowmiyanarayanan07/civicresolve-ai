@@ -120,9 +120,6 @@ const EmployeeDashboard: React.FC<Props> = ({ user, lang, setLang, complaints, u
     const getProgressPct = (s: ComplaintStatus | null) => {
         if (!s) return 0;
         const idx = statusSteps.indexOf(s);
-        return idx === -1 ? 0 : Math.round(((idx + 1) / statusSteps.length) * 100);
-    };
-
     const getProgressPct = (s: ComplaintStatus | null) => {
         if (!s) return 0;
         const idx = statusSteps.indexOf(s);
