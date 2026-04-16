@@ -47,28 +47,31 @@ function rowToComplaint(row: Record<string, unknown>): Complaint {
 }
 
 function complaintToRow(c: Complaint): Record<string, unknown> {
-    return {
+    const row: Record<string, unknown> = {
         id: c.id,
         citizen_id: c.citizenId,
-        citizen_email: c.citizenEmail,
         title: c.title,
         description: c.description,
-        image: c.image ?? null,
         location: c.location,
-        employee_location: c.employeeLocation ?? null,
         category: c.category,
         priority: c.priority,
         status: c.status,
-        assigned_to: c.assignedTo ?? null,
-        ai_analysis: c.aiAnalysis ?? null,
-        ai_verification: c.aiVerification ?? null,
-        admin_comment: c.adminComment ?? null,
-        completion_image: c.completionImage ?? null,
-        feedback_rating: c.feedbackRating ?? null,
-        feedback_comments: c.feedbackComments ?? null,
-        resolved_at: c.resolvedAt ? new Date(c.resolvedAt).toISOString() : null,
-        parent_id: c.parentId ?? null,
     };
+
+    if (c.citizenEmail !== undefined) row.citizen_email = c.citizenEmail;
+    if (c.image !== undefined) row.image = c.image;
+    if (c.employeeLocation !== undefined) row.employee_location = c.employeeLocation;
+    if (c.assignedTo !== undefined) row.assigned_to = c.assignedTo;
+    if (c.aiAnalysis !== undefined) row.ai_analysis = c.aiAnalysis;
+    if (c.aiVerification !== undefined) row.ai_verification = c.aiVerification;
+    if (c.adminComment !== undefined) row.admin_comment = c.adminComment;
+    if (c.completionImage !== undefined) row.completion_image = c.completionImage;
+    if (c.feedbackRating !== undefined) row.feedback_rating = c.feedbackRating;
+    if (c.feedbackComments !== undefined) row.feedback_comments = c.feedbackComments;
+    if (c.resolvedAt !== undefined) row.resolved_at = c.resolvedAt ? new Date(c.resolvedAt).toISOString() : null;
+    if (c.parentId !== undefined) row.parent_id = c.parentId;
+
+    return row;
 }
 
 // ─── AVAILABILITY HELPER ─────────────────────────────────────────────────────
